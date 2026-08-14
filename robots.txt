@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://asrbmy.github.io/kvpdf/sitemap.xml

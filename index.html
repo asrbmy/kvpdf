@@ -3,7 +3,63 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>KVPDF — client-side PDF editor</title>
+
+<title>KVPDF — Free Client-Side PDF Editor (No Uploads) | Annotate, Redact, Sign, Fill</title>
+<meta name="description" content="KVPDF is a free, open-source PDF editor that runs entirely in your browser. Highlight, draw, redact, insert images and signatures, fill forms, merge and reorder pages, add watermarks — nothing is ever uploaded to a server.">
+<meta name="keywords" content="PDF editor, edit PDF online, free PDF editor, client-side PDF editor, redact PDF, sign PDF, fill PDF form, merge PDF, PDF watermark, no upload PDF editor, open source PDF editor">
+<meta name="author" content="asrbmy">
+<meta name="robots" content="index, follow">
+<link rel="canonical" href="https://asrbmy.github.io/kvpdf/">
+<meta name="theme-color" content="#101114">
+
+<!-- Icons -->
+<link rel="icon" href="assets/favicon.ico" sizes="any">
+<link rel="icon" type="image/png" sizes="32x32" href="assets/icon-32.png">
+<link rel="icon" type="image/png" sizes="16x16" href="assets/icon-16.png">
+<link rel="apple-touch-icon" sizes="180x180" href="assets/icon-180.png">
+<link rel="manifest" href="site.webmanifest">
+
+<!-- Open Graph -->
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="KVPDF">
+<meta property="og:title" content="KVPDF — Free Client-Side PDF Editor (No Uploads)">
+<meta property="og:description" content="Annotate, redact, sign, and fill PDFs entirely in your browser. No uploads, no server, no account.">
+<meta property="og:url" content="https://asrbmy.github.io/kvpdf/">
+<meta property="og:image" content="https://asrbmy.github.io/kvpdf/assets/og-banner.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="KVPDF — client-side PDF editor">
+
+<!-- Twitter Card -->
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="KVPDF — Free Client-Side PDF Editor (No Uploads)">
+<meta name="twitter:description" content="Annotate, redact, sign, and fill PDFs entirely in your browser. No uploads, no server, no account.">
+<meta name="twitter:image" content="https://asrbmy.github.io/kvpdf/assets/og-banner.png">
+
+<!-- Structured data -->
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "SoftwareApplication",
+  "name": "KVPDF",
+  "url": "https://asrbmy.github.io/kvpdf/",
+  "applicationCategory": "BusinessApplication",
+  "operatingSystem": "Any (runs in web browser)",
+  "description": "A free, open-source, client-side PDF editor. Annotate, redact, sign, fill forms, merge and reorder pages, and watermark PDFs entirely in the browser — no uploads.",
+  "offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD" },
+  "featureList": [
+    "Highlight, draw, and comment on PDFs",
+    "Permanent redaction",
+    "Insert images and draw signatures",
+    "Fill existing PDF forms or create new fillable fields",
+    "Merge, reorder, rotate, and extract pages",
+    "Watermarking and page numbering",
+    "Runs entirely client-side — no file uploads"
+  ],
+  "author": { "@type": "Person", "name": "asrbmy", "url": "https://github.com/asrbmy" }
+}
+</script>
+
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf-lib/1.17.1/pdf-lib.min.js"></script>
 <style>
@@ -172,9 +228,19 @@ input[type="text"],input[type="number"],select,textarea{font-family:var(--sans);
 
 .toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:var(--panel-2);border:1px solid var(--border);color:var(--text);padding:10px 16px;border-radius:8px;font-size:13px;box-shadow:0 8px 24px rgba(0,0,0,0.5);z-index:100;opacity:0;pointer-events:none;transition:opacity .2s,transform .2s;}
 .toast.show{opacity:1;transform:translateX(-50%) translateY(-4px);}
+
+.sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0;}
 </style>
 </head>
 <body>
+<h1 class="sr-only">KVPDF — Free Client-Side PDF Editor</h1>
+<p class="sr-only">
+  KVPDF is a free, open-source PDF editor that runs entirely in your web browser — no file uploads, no server,
+  no account required. Highlight and draw on PDFs, permanently redact sensitive text, insert images and hand-drawn
+  signatures, fill out existing PDF forms or create your own fillable text fields and checkboxes, merge pages from
+  multiple PDFs, reorder and rotate pages, extract page ranges, add watermarks and page numbers, and export as a
+  new PDF. Everything happens client-side using pdf.js and pdf-lib, so your documents never leave your device.
+</p>
 <div id="app">
   <header id="topbar">
     <a class="brand" href="https://github.com/asrbmy/kvpdf" target="_blank" rel="noopener" title="View on GitHub">KVPDF <span class="tag">/// edit</span></a>
