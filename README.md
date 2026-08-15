@@ -62,24 +62,46 @@ No install, no login. Works on desktop and mobile browsers.
 - Normalize every page to A4 or US Letter on export
 - Export quality toggle — standard (crisp) vs. compressed (smaller file)
 
+### Text & document intelligence
+- **OCR** for scanned/image-only pages (via Tesseract.js) — recognize text per page or across the whole document, review it in a readable panel, and optionally embed it as invisible, searchable/selectable text on export
+- **Compare two PDFs** — word-level text diff, page by page, to spot content changes without a manual side-by-side read
+- **Bookmarks / table of contents** — view a PDF's existing outline and add your own bookmarks, written into the exported file's real navigation panel
+- Extract all recognized text as a `.txt` file, or export every page as an image (`.zip`, PNG or JPEG, adjustable resolution)
+
+### Links & comments
+- Draw clickable link annotations that become real `URI` link objects in the exported PDF
+- Threaded replies on sticky-note comments
+
+### Batch & offline
+- **Batch mode** — apply the same watermark, page-size normalization, and page numbers to a whole folder of PDFs at once, downloaded as a single `.zip`
+- Works offline after the first visit (a service worker caches the app and its libraries)
+
+### Collaboration (basic)
+- Generate a share code to sync annotations with collaborators who have the same PDF open — polling-based, not real-time; see [Limitations](#known-limitations)
+
 ### Quality of life
-- Undo/redo and keyboard shortcuts for every tool
+- Undo/redo with a **named history panel** — jump to any point, not just linear undo
 - Per-tool color memory
+- **Remappable keyboard shortcuts** for every tool
+- Light/dark theme toggle
 - Keyboard page navigation (Page Up/Down, Home/End, jump-to-page)
 - **Autosaved sessions** — refresh the tab and pick up where you left off
+- Prompts for a password when opening an already-encrypted PDF (for viewing/search — see limitations)
 
 ## How it works
 
-KVPDF is a single static `index.html` file with no build step and no backend. It's built on two well-established open-source libraries, loaded from a CDN:
+KVPDF is a single static `index.html` file with no build step and no backend. It's built on a handful of well-established open-source libraries, loaded from a CDN:
 
 | Library | Role |
 |---|---|
-| [**pdf.js**](https://mozilla.github.io/pdf.js/) (Mozilla) | Renders pages to canvas, extracts the text layer for search and selection, and reads existing form field definitions |
-| [**pdf-lib**](https://pdf-lib.js.org/) | Reconstructs the final PDF on export — copying/embedding pages, flattening annotation overlays, creating real fillable form fields, and writing page metadata |
+| [**pdf.js**](https://mozilla.github.io/pdf.js/) (Mozilla) | Renders pages to canvas, extracts the text layer for search and selection, and reads existing form field/outline definitions |
+| [**pdf-lib**](https://pdf-lib.js.org/) | Reconstructs the final PDF on export — copying/embedding pages, flattening annotation overlays, creating real fillable form fields and link/outline objects |
+| [**Tesseract.js**](https://tesseract.projectnaptha.com/) | In-browser OCR for scanned/image-only pages |
+| [**JSZip**](https://stuk.github.io/jszip/) | Bundles multi-file exports (image exports, batch processing output) into a single `.zip` |
 
 Annotations are composited onto a transparent canvas layer that sits above the (still-vector, still-searchable) original page. On export, that layer is rasterized and embedded back into the page at high resolution — so a highlighted, signed, or commented PDF still has selectable text everywhere except where you explicitly redacted or rotated it (those pages are intentionally flattened; see [Limitations](#known-limitations)).
 
-Session state (page order, annotations, form values, and the source PDF bytes) is persisted using the browser's storage APIs so a refresh doesn't lose your work — nothing is written anywhere outside your own browser.
+Session state (page order, annotations, form values, bookmarks, and the source PDF bytes) is persisted using the browser's storage APIs so a refresh doesn't lose your work — nothing is written anywhere outside your own browser. Collaboration reuses the same storage mechanism in a shared mode, gated behind an explicit "share" action.
 
 ## Running locally
 
@@ -92,11 +114,11 @@ python3 -m http.server 8000
 # open http://localhost:8000
 ```
 
-Or just open `index.html` directly in a browser.
+Or just open `index.html` directly in a browser. (The offline service worker only activates when served over `http(s)://`, not `file://`.)
 
 ## Deploying your own copy
 
-1. Push the repo contents (`index.html`, `assets/`, `site.webmanifest`, `robots.txt`, `sitemap.xml`) to the root of your default branch.
+1. Push the repo contents (`index.html`, `sw.js`, `assets/`, `site.webmanifest`, `robots.txt`, `sitemap.xml`) to the root of your default branch.
 2. In **Settings → Pages**, set the source to that branch.
 3. GitHub will publish it at `https://<your-username>.github.io/<repo-name>`.
 
@@ -105,6 +127,7 @@ Or just open `index.html` directly in a browser.
 ```
 kvpdf/
 ├── index.html          # the entire application (HTML + CSS + JS, no build step)
+├── sw.js                # service worker for offline support
 ├── site.webmanifest     # PWA metadata (installable icon, theme color)
 ├── robots.txt
 ├── sitemap.xml
@@ -116,8 +139,11 @@ kvpdf/
 
 ## Known limitations
 
-- **No password protection.** The pdf-lib engine this runs on doesn't support PDF encryption, and there's no trustworthy client-side alternative to fake it with. For a password-protected copy, use `qpdf` or your OS's "Print to PDF" with a password.
+- **No password protection, and no editing of already-encrypted PDFs.** The pdf-lib engine this runs on doesn't support PDF encryption at all — it can neither add a password nor re-save a file that already has one. KVPDF will prompt for a password to let you *view and search* an encrypted PDF (via pdf.js), but export is disabled for that file. For a password-protected copy, or to remove a password, use `qpdf` or your OS's "Print to PDF."
 - **Rotated and redacted pages are flattened to an image on export.** This is required for redaction to actually remove the underlying text, and for rotation to render correctly in every case — but it means those specific pages lose selectable/searchable text in the output PDF. Unrotated, non-redacted pages stay fully vector.
+- **OCR accuracy** depends on scan quality, like any OCR engine — expect it to struggle with poor scans, handwriting, or unusual fonts. Embedded OCR text is positioned per recognized word, which is accurate enough for search/selection but not pixel-perfect.
+- **PDF comparison is text-based, not visual.** It diffs extracted text word-by-word per page — reliable for catching content changes, but it won't catch purely visual/layout-only differences (e.g. an image swapped for a similarly-sized one).
+- **Collaboration is basic and polling-based**, not true real-time editing. There are no live cursors, and syncing happens every few seconds via shared browser storage — it's meant for light, asynchronous co-annotation, not simultaneous fine-grained editing. Anyone with the share code can read and write to that session.
 - **Very large PDFs** may exceed the per-session autosave storage limit. If that happens, KVPDF disables autosave for that session and tells you, rather than failing silently.
 
 ## Contributing
@@ -132,7 +158,7 @@ MIT — see [`LICENSE`](LICENSE).
 
 <div align="center">
 
-Built with [pdf.js](https://mozilla.github.io/pdf.js/) and [pdf-lib](https://pdf-lib.js.org/).
+Built with [pdf.js](https://mozilla.github.io/pdf.js/), [pdf-lib](https://pdf-lib.js.org/), [Tesseract.js](https://tesseract.projectnaptha.com/), and [JSZip](https://stuk.github.io/jszip/).
 
 [Live demo](https://asrbmy.github.io/kvpdf) · [Report an issue](https://github.com/asrbmy/kvpdf/issues)
 
