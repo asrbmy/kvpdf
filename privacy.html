@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Privacy — KVPDF</title>
+<meta name="description" content="KVPDF's privacy policy: what data it processes, where it goes, and why the answer to 'do you see my files' is no.">
+<link rel="canonical" href="https://asrbmy.github.io/kvpdf/privacy.html">
+<link rel="icon" href="assets/favicon.ico" sizes="any">
+<meta name="theme-color" content="#101114">
+<style>
+@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600&display=swap');
+:root{
+  --bg:#101114; --panel:#1B1D22; --panel-2:#22242A; --border:#2C2F36;
+  --text:#EDEEF0; --text-muted:#8B8E96; --accent:#4C7EFF; --accent-soft:rgba(76,126,255,0.16);
+  --mono:'IBM Plex Mono',monospace; --sans:'IBM Plex Sans',sans-serif;
+}
+*{box-sizing:border-box;}
+body{margin:0;background:var(--bg);color:var(--text);font-family:var(--sans);line-height:1.65;}
+.wrap{max-width:720px;margin:0 auto;padding:56px 24px 100px;}
+.brand{font-family:var(--mono);font-weight:600;font-size:15px;text-decoration:none;color:var(--text);}
+.brand .tag{color:var(--accent);font-weight:400;}
+.back{display:inline-flex;align-items:center;gap:6px;color:var(--accent);text-decoration:none;font-size:13px;margin-bottom:32px;font-family:var(--mono);}
+h1{font-family:var(--mono);font-size:28px;margin:24px 0 8px;}
+.updated{color:var(--text-muted);font-size:13px;font-family:var(--mono);margin-bottom:36px;}
+h2{font-family:var(--mono);font-size:16px;margin-top:40px;color:var(--text);border-bottom:1px solid var(--border);padding-bottom:8px;}
+p, li{color:#C7C9CF;font-size:15px;}
+a{color:var(--accent);}
+.callout{background:var(--panel-2);border:1px solid var(--border);border-left:3px solid var(--accent);border-radius:8px;padding:16px 18px;margin:20px 0;}
+.callout p{margin:0;color:var(--text);}
+code{background:var(--panel-2);border:1px solid var(--border);border-radius:4px;padding:1px 6px;font-family:var(--mono);font-size:13px;color:var(--text);}
+ul{padding-left:22px;}
+footer{margin-top:60px;padding-top:24px;border-top:1px solid var(--border);color:var(--text-muted);font-size:13px;font-family:var(--mono);}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <a class="brand" href="index.html">KVPDF <span class="tag">/// edit</span></a>
+  <h1>Privacy Policy</h1>
+  <div class="updated">Last updated: August 2026</div>
+
+  <div class="callout">
+    <p><strong>The short version:</strong> your PDF files never leave your device. There is no server that receives them, ever. Everything — rendering, editing, OCR, export — happens inside your own browser.</p>
+  </div>
+
+  <h2>What KVPDF does with your files</h2>
+  <p>KVPDF is a static web page. It has no backend, no database, and no file upload endpoint of any kind. When you open a PDF, it's read directly into your browser's memory using JavaScript libraries (<a href="https://mozilla.github.io/pdf.js/" target="_blank" rel="noopener">pdf.js</a> and <a href="https://pdf-lib.js.org/" target="_blank" rel="noopener">pdf-lib</a>) that run entirely client-side. The file is processed, rendered, and edited locally. When you export, the resulting PDF is generated in your browser and handed to you as a download — it is never transmitted anywhere.</p>
+  <p>This is true for every feature, including OCR (which runs via <a href="https://tesseract.projectnaptha.com/" target="_blank" rel="noopener">Tesseract.js</a>, a WebAssembly OCR engine that also runs locally) and the compare/batch tools.</p>
+
+  <h2>What is stored, and where</h2>
+  <p>KVPDF autosaves your working session (page order, annotations, form field values, and the file itself) so that refreshing the tab doesn't lose your work. This is stored using your browser's local storage mechanisms — it stays on your device. Depending on how you're accessing KVPDF, this may be:</p>
+  <ul>
+    <li>Standard browser storage, if you're using the app at its own URL — data stays in that browser profile, on that device, and is never sent to us or anyone else.</li>
+    <li>If you're using KVPDF inside an AI assistant's file-preview environment, that environment may provide its own storage layer scoped to your account there — subject to that platform's own privacy policy, not ours.</li>
+  </ul>
+  <p>You can clear this at any time via the "Clear saved session" option in the app's document menu.</p>
+
+  <h2>The "share / collaborate" feature</h2>
+  <p>KVPDF includes an optional, off-by-default feature to sync annotations with collaborators via a session code. If you choose to use it, the annotations you draw (not the underlying PDF file) are written to a shared storage location, readable by anyone who has the code. Don't share a code for anything sensitive. This feature is opt-in — nothing is shared unless you explicitly click "Generate share code" or "Join."</p>
+
+  <h2>Third-party network requests</h2>
+  <p>KVPDF loads its core libraries (pdf.js, pdf-lib) and, only when you use those specific features, JSZip and Tesseract.js from <a href="https://cdnjs.cloudflare.com" target="_blank" rel="noopener">cdnjs</a> (Cloudflare's public CDN), and fonts from Google Fonts. These are standard library/font downloads — the same kind almost every website makes — and do not involve sending your PDF content. Cloudflare and Google may log the fact that a request for a given library/font file was made, per their own standard CDN operation, in the same way any CDN request works across the web; no data about your documents is included in these requests.</p>
+
+  <h2>Analytics</h2>
+  <p id="analytics-status">This site does not currently run any analytics or tracking script. If that changes, this section will be updated first, and it will only ever be a privacy-respecting, cookie-free analytics tool (e.g. Plausible) that measures aggregate traffic — never anything that reads or reports on file contents.</p>
+
+  <h2>Cookies</h2>
+  <p>KVPDF does not set cookies.</p>
+
+  <h2>Changes to this policy</h2>
+  <p>If this policy changes, the "Last updated" date at the top will change accordingly. Given the project's single core promise — nothing is ever uploaded — any future change here is expected to be about storage/analytics details, not that promise itself.</p>
+
+  <h2>Contact</h2>
+  <p>Questions or concerns: open an issue at <a href="https://github.com/asrbmy/kvpdf/issues" target="_blank" rel="noopener">github.com/asrbmy/kvpdf/issues</a>.</p>
+
+  <footer>
+    <a href="index.html" style="color:var(--text-muted);">← Back to KVPDF</a>
+  </footer>
+</div>
+</body>
+</html>

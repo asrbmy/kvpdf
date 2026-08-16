@@ -1,0 +1,34 @@
+# Changelog
+
+All notable changes to KVPDF are documented here. Dates reflect when each batch of work landed.
+
+## [Unreleased]
+
+### Fixed
+- **Memory/listener leak**: `attachOverlayEvents()` was registering a new `window`-level `pointerup` listener on every page render instead of once. Since rotate/delete/reorder/undo/redo/watermark-apply all trigger a full re-render, this accumulated dangling listeners indefinitely. Refactored to a single permanent global handler driven by shared drag state (`state.drag`).
+- Minor: the comment-popup "click outside to close" listener wasn't tracked/removed on subsequent opens; now explicitly cleaned up.
+
+### Added
+- **Mobile layout**: tool rail collapses to a horizontal bottom bar, the pages panel becomes a full-screen drawer, side panels and modals adapt to narrow viewports, and pages themselves now scale down (via CSS transform, computed against actual viewport width) instead of forcing horizontal scroll per page.
+- **Accessibility pass**: `aria-label` on all icon-only buttons, `role="toolbar"` on the tool rail, `role="status"`/`aria-live` on toast notifications, `role="dialog"` + real focus-trapping + Escape-to-close + focus-return on all modals, `aria-pressed` state on tool buttons, `alt` text on inserted images, label association fixes on several form fields.
+- Performance: JSZip and Tesseract.js now lazy-load on first actual use (OCR panel / batch mode / image export) instead of loading on every page visit regardless of whether those features are touched.
+- GitHub Actions workflow for automatic Pages deployment on push to `main`.
+- `CONTRIBUTING.md`, issue templates, and a PR template.
+
+## [Feature-complete milestone]
+
+A large batch landed together: OCR (Tesseract.js) with optional invisible-text embedding on export, PDF-to-PDF text comparison, a bookmarks/outline editor, extract-all-text and export-pages-as-images, real clickable link annotations, threaded comment replies, batch processing across multiple PDFs, offline support via a service worker, a named/jumpable undo history panel, remappable keyboard shortcuts, a light/dark theme toggle, and a password prompt for opening (viewing only) encrypted PDFs.
+
+## [Core editor]
+
+The original feature set: freehand highlight/pen drawing, real text search with select-to-highlight, text boxes and sticky notes, shapes (rectangle/ellipse/line/arrow), permanent redaction (flattens the page to an image so underlying text is actually destroyed), image insertion and hand-drawn signatures with drag/resize, form filling for existing PDF fields plus drawing your own fillable fields with required-field validation, page tools (reorder/rotate/delete/merge/insert blank/multi-select bulk actions/extract), watermarking, page numbering, export-time page-size normalization (A4/Letter), export quality/compression toggle, undo/redo, and autosaved sessions.
+
+### Known, deliberate limitations (not bugs — see README for why)
+- No password protection, and no editing/export of already-encrypted PDFs (pdf-lib has no encryption support at all).
+- Redacted and rotated pages are flattened to a high-resolution image on export — necessary for redaction to actually work and for rotation to render correctly in all cases.
+- PDF comparison is text-based, not a pixel-level visual diff.
+- Collaboration is basic and polling-based (every few seconds via shared storage), not real-time — no live cursors.
+
+---
+
+*This changelog was reconstructed retroactively to reflect the project's actual development history. Going forward, please add entries here as part of any PR that changes user-facing behavior.*
