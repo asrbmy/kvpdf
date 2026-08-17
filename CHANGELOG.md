@@ -4,6 +4,16 @@ All notable changes to KVPDF are documented here. Dates reflect when each batch 
 
 ## [Unreleased]
 
+### Added
+- **Find & redact by pattern**: scans the whole document (real text and anything OCR'd) for emails, phone numbers, SSNs, and Luhn-validated credit card numbers, or a custom regex — review every hit before committing, then redact for real via the existing true-rasterization redaction.
+- **Structured table extraction**: clusters OCR word positions into a row/column grid and exports CSV. A positional heuristic, not a trained model — documented as such in the UI.
+- **Virtualized rendering**: pages now build in two phases — an instant, correctly-sized placeholder for every page, then the expensive canvas+layers render only for pages near the viewport (via `IntersectionObserver`). Search, text extraction, and find-and-redact were all audited and fixed to stay correct regardless of what's visually rendered (search/extract use a lightweight background text prefetch; find-and-redact force-renders before scanning, since it needs real geometry).
+- **Semantic search (experimental)**: an in-browser embedding model (transformers.js, lazy-loaded) indexes the document and ranks passages by meaning rather than exact keyword match. Clearly labeled experimental given its real first-use download size and inference cost.
+- **Realtime collaboration (beta)**: a Yjs/WebRTC-based live-sync option alongside the existing polling-based "Basic" sync (kept as-is, not replaced). Falls back automatically to Basic sync if peers can't connect within 15 seconds. This is the one feature in the project that couldn't be verified with live browser testing — treat it as beta.
+
+### Declined
+- **True in-place PDF text editing** (rewriting `Tj`/`TJ` content-stream operators) — deliberately not built. Doing it wrong risks silent document corruption, which is a worse failure mode than not having the feature. See README for the reasoning.
+
 ### Fixed
 - **Memory/listener leak**: `attachOverlayEvents()` was registering a new `window`-level `pointerup` listener on every page render instead of once. Since rotate/delete/reorder/undo/redo/watermark-apply all trigger a full re-render, this accumulated dangling listeners indefinitely. Refactored to a single permanent global handler driven by shared drag state (`state.drag`).
 - Minor: the comment-popup "click outside to close" listener wasn't tracked/removed on subsequent opens; now explicitly cleaned up.

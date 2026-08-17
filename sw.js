@@ -17,6 +17,11 @@ const CDN_URLS = [
   'https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js',
   'https://cdnjs.cloudflare.com/ajax/libs/tesseract.js/4.1.1/tesseract.min.js',
 ];
+// Domains used by the optional, heavier advanced features (semantic search's
+// transformers.js + model weights, realtime collab's Yjs/y-webrtc). These are
+// cached opportunistically on first use (not pre-fetched at install) so most
+// visitors — who never touch these features — don't pay for that download.
+const LAZY_LIB_DOMAINS = ['https://cdn.jsdelivr.net/', 'https://huggingface.co/'];
 
 self.addEventListener('install', (event) => {
   event.waitUntil((async () => {
@@ -45,10 +50,14 @@ self.addEventListener('fetch', (event) => {
   if (req.method !== 'GET') return;
 
   const isCdn = CDN_URLS.some(u => req.url.startsWith(u));
+  const isLazyLib = LAZY_LIB_DOMAINS.some(d => req.url.startsWith(d));
   const isAppShell = APP_SHELL.some(p => req.url.endsWith(p.replace('./', '')) || req.url.endsWith('/'));
 
-  if (isCdn) {
-    // CDN libs are version-pinned in the URL, so cache-first is safe.
+  if (isCdn || isLazyLib) {
+    // CDN libs are version-pinned (or content-hashed, for model weights), so
+    // cache-first is safe. Lazy-lib domains are only ever requested once a
+    // user opts into semantic search or realtime collab, so this is the
+    // first time they're cached — not pre-fetched at install.
     event.respondWith((async () => {
       const cached = await caches.match(req);
       if (cached) return cached;

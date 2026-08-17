@@ -301,6 +301,16 @@ input[type="text"],input[type="number"],select,textarea{font-family:var(--sans);
 .batch-file-row{display:flex;justify-content:space-between;font-size:12px;padding:4px 2px;}
 .batch-progress{font-family:var(--mono);font-size:11px;color:var(--text-muted);margin-top:8px;}
 
+.fr-result-item{display:flex;align-items:flex-start;gap:8px;padding:7px 4px;border-bottom:1px solid var(--border);font-size:12px;}
+.fr-result-item input{margin-top:3px;flex-shrink:0;}
+.fr-result-meta{font-family:var(--mono);font-size:10px;color:var(--text-muted);}
+.fr-result-text{color:var(--text);word-break:break-word;}
+.fr-tag{display:inline-block;font-size:9px;font-family:var(--mono);padding:1px 6px;border-radius:8px;background:var(--accent-soft);color:var(--accent);margin-right:6px;}
+.sem-result{padding:10px;border:1px solid var(--border);border-radius:8px;margin-bottom:8px;cursor:pointer;background:var(--panel);}
+.sem-result:hover{border-color:var(--accent);}
+.sem-result .sem-meta{font-family:var(--mono);font-size:10px;color:var(--accent);margin-bottom:4px;}
+.sem-result .sem-snippet{font-size:12.5px;color:#C7C9CF;line-height:1.5;}
+
 /* ---- Shortcuts modal ---- */
 .shortcut-row{display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-bottom:1px solid var(--border);font-size:12px;}
 .shortcut-key{font-family:var(--mono);background:var(--panel);border:1px solid var(--border);border-radius:5px;padding:3px 9px;min-width:26px;text-align:center;cursor:pointer;}
@@ -390,6 +400,12 @@ input[type="text"],input[type="number"],select,textarea{font-family:var(--sans);
       </button>
       <button id="batchBtn" class="icon-btn" title="Batch process multiple PDFs" aria-label="Batch process multiple PDFs">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
+      </button>
+      <button id="findRedactBtn" class="icon-btn" title="Find & redact by pattern" aria-label="Find & redact by pattern">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="10" cy="10" r="6.5"/><path d="M20 20l-5.5-5.5"/><rect x="7" y="8.5" width="6" height="3" fill="currentColor" stroke="none"/></svg>
+      </button>
+      <button id="semanticSearchBtn" class="icon-btn" title="Semantic search (experimental)" aria-label="Semantic search (experimental)">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="10" cy="10" r="6.5"/><path d="M20 20l-5.5-5.5"/><path d="M10 6.5v7M6.5 10h7"/></svg>
       </button>
       <button id="collabBtn" class="icon-btn" title="Share / collaborate" aria-label="Share / collaborate">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="6" cy="12" r="2.5"/><circle cx="18" cy="6" r="2.5"/><circle cx="18" cy="18" r="2.5"/><path d="M8.2 10.8l7.6-3.6M8.2 13.2l7.6 3.6"/></svg>
@@ -551,6 +567,11 @@ input[type="text"],input[type="number"],select,textarea{font-family:var(--sans);
         <div id="ocrProgress" style="font-family:var(--mono);font-size:11px;color:var(--text-muted);margin-top:6px;"></div>
         <div class="ocr-text" id="ocrResultText" style="display:none;"></div>
         <div class="btn-row" style="margin-top:8px;"><button id="ocrCopyBtn" style="width:100%;">Copy recognized text</button></div>
+        <hr>
+        <div class="field-row" style="font-size:10.5px;color:var(--text-muted);line-height:1.5;">
+          If the OCR text above looks like a table, this groups words by row/column position and exports a CSV. Works best on simple, well-aligned tables — merged cells or heavily skewed scans may need manual cleanup afterward.
+        </div>
+        <div class="btn-row"><button id="ocrExtractTableBtn" style="width:100%;">Extract table as CSV</button></div>
       </div>
 
       <div id="emptyState">
@@ -653,19 +674,93 @@ input[type="text"],input[type="number"],select,textarea{font-family:var(--sans);
 </div>
 
 <div class="modal-overlay" id="collabModal" role="dialog" aria-modal="true" aria-labelledby="collabModalTitle">
-  <div class="modal" style="width:min(420px,92vw);">
+  <div class="modal" style="width:min(440px,92vw);">
     <h3 id="collabModalTitle">Share / collaborate</h3>
-    <div class="field-row" style="font-size:11px;color:var(--text-muted);margin-bottom:10px;">
-      Basic, best-effort sync: annotations are shared under a session code and merged every few seconds. This is not real-time (no live cursors) — everyone needs to already have the same PDF open locally. Anyone with the code can read and write to that session.
+    <div class="row2" style="margin-bottom:10px;">
+      <button id="collabModeBasic" class="primary" style="flex:1;font-size:12px;">Basic (reliable)</button>
+      <button id="collabModeRealtime" style="flex:1;font-size:12px;">Realtime (beta)</button>
     </div>
-    <div class="field-row"><label>Start a new shared session</label></div>
-    <div class="btn-row"><button id="collabStartBtn" class="primary" style="width:100%;">Generate share code</button></div>
+
+    <div id="collabBasicPane">
+      <div class="field-row" style="font-size:11px;color:var(--text-muted);margin-bottom:10px;">
+        Best-effort sync: annotations are shared under a session code and merged every few seconds. Not real-time (no live cursors) — everyone needs to already have the same PDF open locally. Anyone with the code can read and write to that session.
+      </div>
+      <div class="field-row"><label>Start a new shared session</label></div>
+      <div class="btn-row"><button id="collabStartBtn" class="primary" style="width:100%;">Generate share code</button></div>
+      <hr>
+      <div class="field-row"><label>Join an existing session</label></div>
+      <div class="collab-row"><input type="text" id="collabJoinCode" placeholder="Enter code…" aria-label="Session code to join"><button id="collabJoinBtn">Join</button></div>
+      <div id="collabStatus">Not connected.</div>
+      <div class="btn-row" style="margin-top:10px;"><button id="collabLeaveBtn" style="width:100%;">Stop sharing</button></div>
+    </div>
+
+    <div id="collabRealtimePane" style="display:none;">
+      <div class="field-row" style="font-size:11px;color:var(--text-muted);margin-bottom:10px;">
+        <span style="color:var(--amber);font-family:var(--mono);">EXPERIMENTAL.</span> Syncs annotations live via a peer-to-peer connection (WebRTC) using Yjs — edits appear on collaborators' screens within a second or two instead of every few seconds, and merges are conflict-free by construction rather than last-write-wins. It relies on public WebRTC signaling infrastructure to help peers find each other, which can be blocked by strict firewalls/VPNs — if peers can't connect within about 15 seconds, this automatically falls back to Basic sync so you're never stuck.
+      </div>
+      <div class="field-row"><label>Start a new realtime session</label></div>
+      <div class="btn-row"><button id="rtStartBtn" class="primary" style="width:100%;">Generate realtime room code</button></div>
+      <hr>
+      <div class="field-row"><label>Join an existing realtime session</label></div>
+      <div class="collab-row"><input type="text" id="rtJoinCode" placeholder="Enter room code…" aria-label="Realtime room code to join"><button id="rtJoinBtn">Join</button></div>
+      <div id="rtStatus">Not connected.</div>
+      <div class="btn-row" style="margin-top:10px;"><button id="rtLeaveBtn" style="width:100%;">Stop realtime sharing</button></div>
+    </div>
+
+    <div class="btn-row" style="margin-top:10px;"><button id="collabCloseBtn" style="width:100%;">Close</button></div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="semanticModal" role="dialog" aria-modal="true" aria-labelledby="semanticTitle">
+  <div class="modal" style="width:min(600px,92vw);max-height:86vh;overflow-y:auto;">
+    <h3 id="semanticTitle">Semantic search <span style="font-size:10px;font-family:var(--mono);color:var(--amber);border:1px solid var(--amber);border-radius:8px;padding:1px 7px;vertical-align:middle;">EXPERIMENTAL</span></h3>
+    <div class="field-row" style="font-size:11px;color:var(--text-muted);line-height:1.6;margin-bottom:10px;">
+      Finds passages by meaning, not just exact words — e.g. searching "liability" can surface a sentence about "who's responsible for damages." Runs a small AI model entirely in your browser (via <a href="https://github.com/xenova/transformers.js" target="_blank" rel="noopener">transformers.js</a>) — nothing about your document is sent anywhere. The first time you use this, it downloads a ~25–90MB model, which your browser then caches for next time. Indexing a long document can take a couple of minutes on slower devices — this is genuinely running a neural network on your CPU, not a shortcut.
+    </div>
+    <div class="btn-row"><button id="semanticIndexBtn" class="primary" style="width:100%;">Build index for this document</button></div>
+    <div id="semanticProgress" style="font-family:var(--mono);font-size:11px;color:var(--text-muted);margin:8px 0;"></div>
     <hr>
-    <div class="field-row"><label>Join an existing session</label></div>
-    <div class="collab-row"><input type="text" id="collabJoinCode" placeholder="Enter code…" aria-label="Session code to join"><button id="collabJoinBtn">Join</button></div>
-    <div id="collabStatus">Not connected.</div>
-    <div class="btn-row" style="margin-top:10px;"><button id="collabLeaveBtn" style="width:100%;">Stop sharing</button></div>
-    <div class="btn-row" style="margin-top:8px;"><button id="collabCloseBtn" style="width:100%;">Close</button></div>
+    <div class="collab-row">
+      <input type="text" id="semanticQuery" placeholder="Describe what you're looking for…" aria-label="Semantic search query" disabled>
+      <button id="semanticSearchRunBtn" disabled>Search</button>
+    </div>
+    <div id="semanticResults" style="margin-top:10px;"></div>
+    <div class="btn-row" style="margin-top:12px;">
+      <button id="semanticClearBtn" style="width:100%;">Clear index</button>
+      <button id="semanticCloseBtn" style="width:100%;">Close</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="findRedactModal" role="dialog" aria-modal="true" aria-labelledby="findRedactTitle">
+  <div class="modal" style="width:min(600px,92vw);max-height:86vh;overflow-y:auto;">
+    <h3 id="findRedactTitle">Find & redact by pattern</h3>
+    <div class="field-row" style="font-size:11px;color:var(--text-muted);margin-bottom:10px;">
+      Scans every page for matching text and lets you review each hit before redacting. Works on both real text and any pages you've already run OCR on. Text-based matches use a proportional estimate of where a match sits within its line, so double-check the preview before applying — especially on unusual fonts or right-to-left text.
+    </div>
+    <div class="row2">
+      <div class="field-row"><label class="checkbox-row"><input type="checkbox" id="frPatternEmail" checked> Email addresses</label></div>
+      <div class="field-row"><label class="checkbox-row"><input type="checkbox" id="frPatternPhone" checked> Phone numbers</label></div>
+    </div>
+    <div class="row2">
+      <div class="field-row"><label class="checkbox-row"><input type="checkbox" id="frPatternSSN" checked> US SSNs (###-##-####)</label></div>
+      <div class="field-row"><label class="checkbox-row"><input type="checkbox" id="frPatternCC"> Credit card numbers</label></div>
+    </div>
+    <div class="field-row">
+      <label class="checkbox-row"><input type="checkbox" id="frPatternCustom"> Custom regex</label>
+      <input type="text" id="frCustomRegex" placeholder="e.g. \bINV-\d{6}\b" disabled aria-label="Custom regex pattern">
+    </div>
+    <div class="btn-row"><button id="frScanBtn" class="primary" style="width:100%;">Scan document</button></div>
+    <div id="frProgress" style="font-family:var(--mono);font-size:11px;color:var(--text-muted);margin:6px 0;"></div>
+    <div id="frResultsHeader" style="display:none;font-size:12px;color:var(--text-muted);margin:10px 0 4px;display:flex;justify-content:space-between;align-items:center;">
+      <span id="frResultsCount"></span>
+      <span><button id="frSelectAll" style="font-size:11px;padding:3px 8px;">Select all</button> <button id="frSelectNone" style="font-size:11px;padding:3px 8px;">Select none</button></span>
+    </div>
+    <div id="frResultsList" style="max-height:280px;overflow-y:auto;"></div>
+    <div class="btn-row" style="margin-top:12px;">
+      <button id="frApplyBtn" class="primary" style="width:100%;" disabled>Redact selected matches</button>
+      <button id="frCloseBtn" style="width:100%;">Close</button>
+    </div>
   </div>
 </div>
 
@@ -733,6 +828,7 @@ const state = {
   textLayers: {}, search: { query:'', matches:[], current:-1 },
   autosaveDisabled: false, autosaveTimer: null, pendingRestore: null,
   imageCache: new Map(), selectedPageIds: new Set(), blankSourceId: null,
+  renderedPageIds: new Set(), textContentCache: {},
   labeledHistory: [], theme: 'dark',
   bookmarks: [], existingOutline: null,
   compareA: null, compareB: null,
@@ -753,14 +849,21 @@ const els = {};
  'sigModal','sigCanvas','sigClear','sigCancel','sigUse',
  'historyBtn','historyPanel','historyCloseBtn','historyList',
  'bookmarksBtn','bookmarksPanel','bookmarksCloseBtn','existingOutline','addBookmarkBtn','bookmarkList',
- 'ocrToolBtn','ocrPanel','ocrCloseBtn','ocrEmbedToggle','ocrRunPageBtn','ocrRunAllBtn','ocrProgress','ocrResultText','ocrCopyBtn',
+ 'ocrToolBtn','ocrPanel','ocrCloseBtn','ocrEmbedToggle','ocrRunPageBtn','ocrRunAllBtn','ocrProgress','ocrResultText','ocrCopyBtn','ocrExtractTableBtn',
  'compareBtn','compareModal','compareOpenA','compareOpenB','compareInputA','compareInputB','compareRunBtn','compareFileNames','compareResults','compareCloseBtn',
  'batchBtn','batchModal','batchAddFiles','batchFileInput','batchFileList','batchWmEnable','batchWmText','batchWmOpacity','batchPageSize','batchPnEnable','batchRunBtn','batchProgress','batchCloseBtn',
  'shortcutsBtn','shortcutsModal','shortcutList','shortcutsResetBtn','shortcutsCloseBtn',
  'collabBtn','collabModal','collabStartBtn','collabJoinCode','collabJoinBtn','collabStatus','collabLeaveBtn','collabCloseBtn',
+ 'collabModeBasic','collabModeRealtime','collabBasicPane','collabRealtimePane',
+ 'rtStartBtn','rtJoinCode','rtJoinBtn','rtStatus','rtLeaveBtn',
  'themeToggleBtn','extractTextBtn','imgExportFormat','imgExportDpi','exportImagesBtn',
  'pagesPanelToggleBtn','pagesPanelCloseBtn',
- 'whatsNewLink','whatsNewModal','whatsNewList','whatsNewCloseBtn','langSelect'
+ 'whatsNewLink','whatsNewModal','whatsNewList','whatsNewCloseBtn','langSelect',
+ 'findRedactBtn','findRedactModal','frPatternEmail','frPatternPhone','frPatternSSN','frPatternCC',
+ 'semanticSearchBtn','semanticModal','semanticIndexBtn','semanticProgress','semanticQuery',
+ 'semanticSearchRunBtn','semanticResults','semanticClearBtn','semanticCloseBtn',
+ 'frPatternCustom','frCustomRegex','frScanBtn','frProgress','frResultsHeader','frResultsCount',
+ 'frSelectAll','frSelectNone','frResultsList','frApplyBtn','frCloseBtn'
 ].forEach(id => els[id] = document.getElementById(id));
 
 function genId(){ return 'p_' + Math.random().toString(36).slice(2,10) + Date.now().toString(36); }
@@ -1105,6 +1208,7 @@ async function openFile(file, reset){
     if (reset){
       hideRestoreBanner();
       state.pages = []; state.fieldValues = {}; state.history = []; state.future = []; state.labeledHistory = []; state.bookmarks = [];
+      state.textContentCache = {}; state.ocrCache = {};
       state.fileBaseName = file.name.replace(/\.pdf$/i,''); state.autosaveDisabled = false;
       els.fileInfo.textContent = file.name;
     }
@@ -1125,12 +1229,48 @@ async function openFile(file, reset){
 }
 
 /* ================= Rendering pages ================= */
+/* ================= Virtualized rendering =================
+   Rendering every page's canvas + interactive layers up front is fine for a
+   5-page doc and slow/memory-heavy for a 400-page one. Pages are now built in
+   two phases: a cheap placeholder (correct size, no canvas render) for every
+   page immediately, then the expensive canvas+layers render only for pages
+   near the viewport, triggered by IntersectionObserver as the user scrolls.
+   Search and text extraction need full-document text regardless of what's
+   visually rendered, so raw text content is prefetched in the background
+   for every page separately from the (deferred) visual render. */
+let _pageObserver = null;
+function getPageObserver(){
+  if (_pageObserver) return _pageObserver;
+  _pageObserver = new IntersectionObserver((entries)=>{
+    entries.forEach(entry=>{
+      if (!entry.isIntersecting) return;
+      const pageId = entry.target.dataset.id;
+      const pageEntry = state.pages.find(p=>p.id===pageId);
+      if (pageEntry && !state.renderedPageIds.has(pageId)){
+        renderPageContent(pageEntry);
+      }
+      _pageObserver.unobserve(entry.target);
+    });
+  }, { root: els.canvasArea, rootMargin: '1000px 0px 1000px 0px' });
+  return _pageObserver;
+}
+
 async function renderAllPages(){
   els.pagesContainer.innerHTML = '';
   state.textLayers = {};
-  for (const pageEntry of state.pages) await renderPageBlock(pageEntry);
+  state.renderedPageIds = new Set();
+  if (_pageObserver){ _pageObserver.disconnect(); _pageObserver = null; }
+
+  for (const pageEntry of state.pages) await createPagePlaceholder(pageEntry);
   updatePageNavUI();
   applyResponsiveScale();
+
+  // Render enough pages up front that the initial view never shows blank
+  // placeholders, then let IntersectionObserver take over for the rest.
+  const eager = state.pages.slice(0, 3);
+  for (const pageEntry of eager) await renderPageContent(pageEntry);
+
+  prefetchAllTextContent(); // fire-and-forget, keeps search/extract correct
 }
 
 /* Scales each rendered page down (via CSS transform, which pointer-event math
@@ -1164,12 +1304,12 @@ window.addEventListener('resize', ()=>{
   _resizeTimer = setTimeout(applyResponsiveScale, 150);
 });
 
-async function renderPageBlock(pageEntry){
+/* Cheap phase: just enough pdf.js metadata (viewport dimensions) to build a
+   correctly-sized, empty page shell. No canvas render, no text/form layers. */
+async function createPagePlaceholder(pageEntry){
   const src = state.sources[pageEntry.sourceId];
   const page = await src.pdfjsDoc.getPage(pageEntry.origIndex + 1);
-  const nativeViewport = page.getViewport({ scale: 1, rotation: pageEntry.rotation });
-  const scale = TARGET_WIDTH / nativeViewport.width;
-  const viewport = page.getViewport({ scale, rotation: pageEntry.rotation });
+  const viewport = page.getViewport({ scale: TARGET_WIDTH / page.getViewport({scale:1, rotation:pageEntry.rotation}).width, rotation: pageEntry.rotation });
 
   const block = document.createElement('div');
   block.className = 'page-block'; block.dataset.id = pageEntry.id;
@@ -1178,6 +1318,34 @@ async function renderPageBlock(pageEntry){
   wrap.className = 'page-canvas-wrap';
   wrap.style.width = viewport.width + 'px'; wrap.style.height = viewport.height + 'px';
   wrap.dataset.naturalWidth = viewport.width; wrap.dataset.naturalHeight = viewport.height;
+
+  const label = document.createElement('div');
+  label.className = 'page-label';
+  label.textContent = `PAGE ${state.pages.indexOf(pageEntry)+1} OF ${state.pages.length}`;
+
+  const scaleBox = document.createElement('div');
+  scaleBox.className = 'page-scale-box';
+  scaleBox.appendChild(wrap);
+  block.appendChild(scaleBox); block.appendChild(label);
+  els.pagesContainer.appendChild(block);
+
+  getPageObserver().observe(block);
+}
+
+/* Expensive phase: the actual canvas render plus every interactive layer.
+   Safe to call more than once for the same page — it's a no-op if already
+   rendered, and it locates the existing (already correctly-sized) wrap
+   rather than rebuilding the page shell, so scroll position doesn't jump. */
+async function renderPageContent(pageEntry){
+  if (state.renderedPageIds.has(pageEntry.id)) return;
+  const block = els.pagesContainer.querySelector(`.page-block[data-id="${pageEntry.id}"]`);
+  const wrap = block && block.querySelector('.page-canvas-wrap');
+  if (!block || !wrap) return;
+  state.renderedPageIds.add(pageEntry.id);
+
+  const src = state.sources[pageEntry.sourceId];
+  const page = await src.pdfjsDoc.getPage(pageEntry.origIndex + 1);
+  const viewport = page.getViewport({ scale: TARGET_WIDTH / page.getViewport({scale:1, rotation:pageEntry.rotation}).width, rotation: pageEntry.rotation });
 
   const baseCanvas = document.createElement('canvas');
   baseCanvas.className = 'base-canvas';
@@ -1207,16 +1375,6 @@ async function renderPageBlock(pageEntry){
   wrap.appendChild(linkLayer);
   ['tl','tr','bl','br'].forEach(pos=>{ const c=document.createElement('div'); c.className='crop crop-'+pos; wrap.appendChild(c); });
 
-  const label = document.createElement('div');
-  label.className = 'page-label';
-  label.textContent = `PAGE ${state.pages.indexOf(pageEntry)+1} OF ${state.pages.length}`;
-
-  const scaleBox = document.createElement('div');
-  scaleBox.className = 'page-scale-box';
-  scaleBox.appendChild(wrap);
-  block.appendChild(scaleBox); block.appendChild(label);
-  els.pagesContainer.appendChild(block);
-
   drawLiveOverlay(overlay, pageEntry);
   attachOverlayEvents(overlay, pageEntry, textAnnotLayer);
   await buildFormLayer(page, viewport, formLayer);
@@ -1225,6 +1383,30 @@ async function renderPageBlock(pageEntry){
   buildCustomFieldBoxes(pageEntry, customFieldLayer);
   buildLinkLayer(pageEntry, linkLayer);
   await buildPdfTextLayer(page, viewport, textLayerDiv, pageEntry);
+}
+
+/* Guarantees every page has its full interactive render — used before
+   operations that need to inspect every page's rendered geometry (find &
+   redact scan) rather than just its text (which prefetches separately). */
+async function ensureAllPagesRendered(){
+  for (const pageEntry of state.pages){
+    if (!state.renderedPageIds.has(pageEntry.id)) await renderPageContent(pageEntry);
+  }
+}
+
+/* Lightweight, non-blocking: just the raw text per page, no rendering.
+   Keeps search and text extraction correct across the whole document even
+   for pages that haven't been visually rendered yet. */
+async function prefetchAllTextContent(){
+  for (const pageEntry of state.pages){
+    if (state.textContentCache[pageEntry.id]) continue;
+    try{
+      const src = state.sources[pageEntry.sourceId];
+      const page = await src.pdfjsDoc.getPage(pageEntry.origIndex + 1);
+      const tc = await page.getTextContent();
+      state.textContentCache[pageEntry.id] = { items: tc.items };
+    }catch(e){ console.warn('Could not prefetch text for a page', e); }
+  }
 }
 
 /* ---- Real pdf.js text layer (search + select-to-highlight) ---- */
@@ -1236,6 +1418,7 @@ async function buildPdfTextLayer(page, viewport, container, pageEntry){
     await task.promise;
     const spans = Array.from(container.querySelectorAll('span'));
     state.textLayers[pageEntry.id] = { div: container, items: textContent.items, spans };
+    state.textContentCache[pageEntry.id] = { items: textContent.items };
   }catch(e){ console.warn('Text layer unavailable for this page', e); }
 }
 
@@ -1740,17 +1923,21 @@ els.searchNext.addEventListener('click', ()=>stepMatch(1));
 function openSearch(){ if(!state.pages.length){ showToast('Open a PDF first'); return; } closeDocMenu(); els.searchBar.classList.add('open'); els.searchInput.focus(); els.searchInput.select(); }
 function closeSearch(){ els.searchBar.classList.remove('open'); clearSearchHighlights(); state.search={query:'',matches:[],current:-1}; els.searchCount.textContent='0 / 0'; }
 function clearSearchHighlights(){ document.querySelectorAll('.search-match,.search-match-current').forEach(s=>s.classList.remove('search-match','search-match-current')); }
-function runSearch(query){
+async function runSearch(query){
   clearSearchHighlights();
   state.search = { query, matches:[], current:-1 };
   if (!query.trim()){ els.searchCount.textContent='0 / 0'; return; }
+  els.searchCount.textContent = 'Searching…';
+  await prefetchAllTextContent(); // ensures unrendered pages are still searchable
   const q = query.toLowerCase();
   state.pages.forEach((pageEntry, pageIdx)=>{
-    const tl = state.textLayers[pageEntry.id]; if (!tl) return;
-    tl.items.forEach((item, itemIdx)=>{
+    const cached = state.textContentCache[pageEntry.id]; if (!cached) return;
+    cached.items.forEach((item, itemIdx)=>{
       if (item.str && item.str.toLowerCase().includes(q)){
         state.search.matches.push({ pageIdx, itemIdx });
-        const span = tl.spans[itemIdx]; if (span) span.classList.add('search-match');
+        const tl = state.textLayers[pageEntry.id];
+        const span = tl && tl.spans[itemIdx];
+        if (span) span.classList.add('search-match');
       }
     });
   });
@@ -1764,12 +1951,27 @@ function stepMatch(dir){
   if (next>=state.search.matches.length) next=0;
   goToMatch(next);
 }
-function goToMatch(i){
+async function goToMatch(i){
   const prev = state.search.matches[state.search.current];
   if (prev){ const tl=state.textLayers[state.pages[prev.pageIdx].id]; const span=tl&&tl.spans[prev.itemIdx]; if(span) span.classList.remove('search-match-current'); }
   state.search.current = i;
   const m = state.search.matches[i];
   const pageEntry = state.pages[m.pageIdx];
+  if (!state.renderedPageIds.has(pageEntry.id)){
+    // Jumping to a match on a page that hasn't been visually rendered yet
+    // (virtualized rendering) — render it now so there's a span to highlight.
+    const block = els.pagesContainer.querySelector(`.page-block[data-id="${pageEntry.id}"]`);
+    if (block) block.scrollIntoView({ behavior:'auto', block:'center' });
+    await renderPageContent(pageEntry);
+    // The freshly-built text layer needs the search-match classes re-applied
+    // for this page since it didn't exist when runSearch first ran.
+    const tl = state.textLayers[pageEntry.id];
+    if (tl){
+      state.search.matches.forEach(mm=>{
+        if (mm.pageIdx === m.pageIdx){ const s = tl.spans[mm.itemIdx]; if (s) s.classList.add('search-match'); }
+      });
+    }
+  }
   const tl = state.textLayers[pageEntry.id];
   const span = tl && tl.spans[m.itemIdx];
   if (span){ span.classList.add('search-match-current'); span.scrollIntoView({behavior:'smooth', block:'center'}); }
@@ -2029,6 +2231,357 @@ els.ocrCopyBtn.addEventListener('click', async ()=>{
   if (!data){ showToast('No OCR text for this page yet'); return; }
   try{ await navigator.clipboard.writeText(data.text); showToast('Copied to clipboard'); }
   catch(e){ showToast('Could not copy — select and copy manually'); }
+});
+
+/* Groups OCR words into a row/column grid by position — a heuristic, not a
+   trained table-detection model. Works well for simple, evenly-spaced tables;
+   struggles with merged cells, rotated scans, or tables with inconsistent
+   column gaps. */
+function extractTableFromWords(words){
+  const items = words.filter(w => w.text && w.text.trim());
+  if (!items.length) return [];
+
+  const withCenter = items.map(w => ({ ...w, cy: w.y + w.h/2 })).sort((a,b) => a.cy - b.cy);
+  const heights = withCenter.map(w => w.h).sort((a,b) => a-b);
+  const medianH = heights[Math.floor(heights.length/2)] || 0.02;
+  const rowThreshold = medianH * 0.6;
+
+  const rows = [[withCenter[0]]];
+  for (let i=1; i<withCenter.length; i++){
+    const prevCy = rows[rows.length-1][rows[rows.length-1].length-1].cy;
+    if (Math.abs(withCenter[i].cy - prevCy) <= rowThreshold) rows[rows.length-1].push(withCenter[i]);
+    else rows.push([withCenter[i]]);
+  }
+  rows.forEach(r => r.sort((a,b) => a.x - b.x));
+
+  const allX = items.map(w => w.x).sort((a,b) => a-b);
+  const colBoundaries = [];
+  let clusterStart = allX[0], lastX = allX[0];
+  const xGapThreshold = 0.02;
+  for (let i=1; i<allX.length; i++){
+    if (allX[i]-lastX > xGapThreshold){ colBoundaries.push((clusterStart+lastX)/2); clusterStart = allX[i]; }
+    lastX = allX[i];
+  }
+  colBoundaries.push((clusterStart+lastX)/2);
+
+  const colIndexFor = (x) => {
+    let best=0, bestDist=Infinity;
+    colBoundaries.forEach((cx,i)=>{ const d=Math.abs(x-cx); if(d<bestDist){bestDist=d;best=i;} });
+    return best;
+  };
+
+  return rows.map(row=>{
+    const cells = new Array(colBoundaries.length).fill('');
+    row.forEach(w=>{
+      const ci = colIndexFor(w.x);
+      cells[ci] = cells[ci] ? cells[ci] + ' ' + w.text : w.text;
+    });
+    return cells;
+  });
+}
+function gridToCsv(grid){
+  return grid.map(row => row.map(cell=>{
+    const needsQuote = /[",\n]/.test(cell);
+    const escaped = String(cell).replace(/"/g, '""');
+    return needsQuote ? `"${escaped}"` : escaped;
+  }).join(',')).join('\r\n');
+}
+els.ocrExtractTableBtn.addEventListener('click', ()=>{
+  const pageEntry = getMostVisiblePageEntry();
+  const data = pageEntry && state.ocrCache[pageEntry.id];
+  if (!data){ showToast('Run OCR on this page first'); return; }
+  const grid = extractTableFromWords(data.words);
+  if (!grid.length){ showToast('No recognizable table structure found'); return; }
+  const csv = gridToCsv(grid);
+  const pageNum = state.pages.indexOf(pageEntry) + 1;
+  const blob = new Blob([csv], { type: 'text/csv' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a'); a.href = url; a.download = `${state.fileBaseName}-page${pageNum}-table.csv`;
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(()=>URL.revokeObjectURL(url), 4000);
+  showToast(`Exported a ${grid.length}×${grid[0].length} table — check it over, this is a best-effort layout guess`);
+});
+
+/* ================= Find & redact by pattern ================= */
+const FR_PATTERNS = {
+  email: { label: 'Email', re: () => /[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/g },
+  phone: { label: 'Phone', re: () => /(\+?1[-.\s]?)?\(?\d{3}\)?[-.\s]?\d{3}[-.\s]?\d{4}\b/g },
+  ssn:   { label: 'SSN', re: () => /\b\d{3}-\d{2}-\d{4}\b/g },
+  cc:    { label: 'Card', re: () => /\b(?:\d[ -]?){13,19}\b/g },
+};
+function luhnValid(digitsOnly){
+  let sum = 0, alt = false;
+  for (let i = digitsOnly.length-1; i>=0; i--){
+    let d = parseInt(digitsOnly[i], 10);
+    if (alt){ d *= 2; if (d > 9) d -= 9; }
+    sum += d; alt = !alt;
+  }
+  return digitsOnly.length >= 13 && sum % 10 === 0;
+}
+
+let frMatches = []; // {id, pageEntry, pageIndex, type, text, rect:[x,y,w,h], selected}
+
+els.frPatternCustom.addEventListener('change', ()=>{ els.frCustomRegex.disabled = !els.frPatternCustom.checked; });
+els.findRedactBtn.addEventListener('click', ()=>{
+  if (!state.pages.length){ showToast('Open a PDF first'); return; }
+  els.findRedactModal.classList.add('open');
+});
+els.frCloseBtn.addEventListener('click', ()=> els.findRedactModal.classList.remove('open'));
+
+function activeFrPatterns(){
+  const active = [];
+  if (els.frPatternEmail.checked) active.push(FR_PATTERNS.email);
+  if (els.frPatternPhone.checked) active.push(FR_PATTERNS.phone);
+  if (els.frPatternSSN.checked) active.push(FR_PATTERNS.ssn);
+  if (els.frPatternCC.checked) active.push(FR_PATTERNS.cc);
+  if (els.frPatternCustom.checked && els.frCustomRegex.value.trim()){
+    try{
+      const userRe = new RegExp(els.frCustomRegex.value.trim(), 'g');
+      active.push({ label: 'Custom', re: () => userRe });
+    }catch(e){ showToast('That custom regex is invalid'); }
+  }
+  return active;
+}
+
+function findMatchesInString(str, patterns){
+  const found = [];
+  for (const p of patterns){
+    const re = p.re();
+    let m;
+    while ((m = re.exec(str)) !== null){
+      if (m[0].length === 0){ re.lastIndex++; continue; }
+      if (p.label === 'Card'){
+        const digitsOnly = m[0].replace(/[ -]/g, '');
+        if (!luhnValid(digitsOnly)) continue;
+      }
+      found.push({ label: p.label, text: m[0], start: m.index, end: m.index + m[0].length });
+    }
+  }
+  return found;
+}
+
+els.frScanBtn.addEventListener('click', async ()=>{
+  const patterns = activeFrPatterns();
+  if (!patterns.length){ showToast('Choose at least one pattern'); return; }
+  els.frScanBtn.disabled = true;
+  frMatches = [];
+  let matchCounter = 0;
+
+  els.frProgress.textContent = 'Preparing pages…';
+  await ensureAllPagesRendered(); // scanning needs real on-page positions, not just text
+
+  for (let pageIdx=0; pageIdx<state.pages.length; pageIdx++){
+    const pageEntry = state.pages[pageIdx];
+    els.frProgress.textContent = `Scanning page ${pageIdx+1} of ${state.pages.length}…`;
+
+    // Vector text (from the rendered text layer)
+    const tl = state.textLayers[pageEntry.id];
+    if (tl){
+      tl.items.forEach((item, itemIdx)=>{
+        if (!item.str) return;
+        const hits = findMatchesInString(item.str, patterns);
+        if (!hits.length) return;
+        const span = tl.spans[itemIdx];
+        const wrap = span && span.closest('.page-canvas-wrap');
+        if (!span || !wrap) return;
+        const wrapRect = wrap.getBoundingClientRect();
+        const spanRect = span.getBoundingClientRect();
+        const relX = (spanRect.left - wrapRect.left) / wrapRect.width;
+        const relY = (spanRect.top - wrapRect.top) / wrapRect.height;
+        const relW = spanRect.width / wrapRect.width;
+        const relH = spanRect.height / wrapRect.height;
+        hits.forEach(hit=>{
+          const fracStart = hit.start / item.str.length, fracEnd = hit.end / item.str.length;
+          frMatches.push({
+            id: 'fr_' + (matchCounter++), pageEntry, pageIndex: pageIdx, type: hit.label, text: hit.text,
+            rect: [relX + relW*fracStart, relY - relH*0.15, relW*(fracEnd-fracStart), relH*1.3],
+            selected: true,
+          });
+        });
+      });
+    }
+
+    // OCR words (for scanned pages you've already run OCR on)
+    const ocr = state.ocrCache[pageEntry.id];
+    if (ocr){
+      ocr.words.forEach(w=>{
+        if (!w.text) return;
+        const hits = findMatchesInString(w.text, patterns);
+        hits.forEach(hit=>{
+          frMatches.push({
+            id: 'fr_' + (matchCounter++), pageEntry, pageIndex: pageIdx, type: hit.label, text: hit.text,
+            rect: [w.x, w.y, w.w, w.h], selected: true,
+          });
+        });
+      });
+    }
+  }
+
+  els.frProgress.textContent = '';
+  els.frScanBtn.disabled = false;
+  renderFrResults();
+});
+
+function renderFrResults(){
+  els.frResultsHeader.style.display = frMatches.length ? 'flex' : 'none';
+  els.frResultsCount.textContent = `${frMatches.length} match${frMatches.length===1?'':'es'} found`;
+  els.frApplyBtn.disabled = frMatches.length === 0;
+  els.frResultsList.innerHTML = '';
+  if (!frMatches.length){
+    els.frResultsList.innerHTML = '<div style="font-size:12px;color:var(--text-muted);padding:8px 0;">No matches — or click "Scan document" first.</div>';
+    return;
+  }
+  frMatches.forEach(match=>{
+    const row = document.createElement('div'); row.className = 'fr-result-item';
+    const chk = document.createElement('input'); chk.type = 'checkbox'; chk.checked = match.selected;
+    chk.addEventListener('change', ()=>{ match.selected = chk.checked; });
+    const body = document.createElement('div');
+    body.innerHTML = `<span class="fr-tag">${match.type}</span><span class="fr-result-text">${match.text.replace(/&/g,'&amp;').replace(/</g,'&lt;')}</span><br><span class="fr-result-meta">Page ${match.pageIndex+1}</span>`;
+    row.appendChild(chk); row.appendChild(body);
+    els.frResultsList.appendChild(row);
+  });
+}
+els.frSelectAll.addEventListener('click', ()=>{ frMatches.forEach(m=>m.selected=true); renderFrResults(); });
+els.frSelectNone.addEventListener('click', ()=>{ frMatches.forEach(m=>m.selected=false); renderFrResults(); });
+
+els.frApplyBtn.addEventListener('click', async ()=>{
+  const selected = frMatches.filter(m=>m.selected);
+  if (!selected.length){ showToast('No matches selected'); return; }
+  selected.forEach(match=>{
+    const [x,y,w,h] = match.rect;
+    match.pageEntry.annotations.push({ id: genId(), type:'redact', x, y, w, h });
+  });
+  pushHistory(`Redacted ${selected.length} pattern match${selected.length===1?'':'es'}`);
+  await renderAllPages();
+  els.findRedactModal.classList.remove('open');
+  frMatches = [];
+  showToast(`Redacted ${selected.length} match${selected.length===1?'':'es'} — remember to export to make it permanent`);
+});
+
+/* ================= Semantic search (experimental) =================
+   Runs a small sentence-embedding model client-side via transformers.js.
+   This is a genuinely heavy feature — a real ~25-90MB model download on
+   first use, and real CPU/WASM inference time to index a document — so it
+   is fully opt-in, loaded only when the user explicitly builds an index,
+   and every step is defensively wrapped since WebAssembly/model-loading
+   behavior varies by browser and can't be verified without live testing. */
+state.semantic = { chunks: [], embedder: null, indexing: false };
+
+async function loadTransformersModule(){
+  if (state._transformersModule) return state._transformersModule;
+  els.semanticProgress.textContent = 'Loading AI engine…';
+  const mod = await import('https://cdn.jsdelivr.net/npm/@xenova/transformers@2.17.2');
+  state._transformersModule = mod;
+  return mod;
+}
+async function getEmbedder(){
+  if (state.semantic.embedder) return state.semantic.embedder;
+  const { pipeline, env } = await loadTransformersModule();
+  env.allowLocalModels = false;
+  els.semanticProgress.textContent = 'Downloading model (first time only)…';
+  state.semantic.embedder = await pipeline('feature-extraction', 'Xenova/all-MiniLM-L6-v2');
+  return state.semantic.embedder;
+}
+function chunkText(text, pageIdx, chunkSize=800, overlap=120){
+  const chunks = [];
+  const clean = text.replace(/\s+/g, ' ').trim();
+  if (!clean) return chunks;
+  let start = 0;
+  while (start < clean.length){
+    const end = Math.min(clean.length, start + chunkSize);
+    chunks.push({ pageIdx, text: clean.slice(start, end) });
+    if (end >= clean.length) break;
+    start = end - overlap;
+  }
+  return chunks;
+}
+function dotProduct(a, b){ let s=0; for (let i=0;i<a.length;i++) s += a[i]*b[i]; return s; }
+
+els.semanticSearchBtn.addEventListener('click', ()=>{
+  if (!state.pages.length){ showToast('Open a PDF first'); return; }
+  els.semanticModal.classList.add('open');
+});
+els.semanticCloseBtn.addEventListener('click', ()=> els.semanticModal.classList.remove('open'));
+
+els.semanticIndexBtn.addEventListener('click', async ()=>{
+  if (state.semantic.indexing) return;
+  state.semantic.indexing = true;
+  els.semanticIndexBtn.disabled = true;
+  try{
+    await prefetchAllTextContent();
+    const embedder = await getEmbedder();
+
+    const allChunks = [];
+    state.pages.forEach((pageEntry, pageIdx)=>{
+      const cached = state.textContentCache[pageEntry.id];
+      let text = cached ? cached.items.map(it=>it.str).join(' ') : '';
+      if ((!text || !text.trim()) && state.ocrCache[pageEntry.id]) text = state.ocrCache[pageEntry.id].text;
+      allChunks.push(...chunkText(text, pageIdx));
+    });
+    if (!allChunks.length){ showToast('No extractable text found to index'); return; }
+
+    for (let i=0; i<allChunks.length; i++){
+      els.semanticProgress.textContent = `Indexing passage ${i+1} of ${allChunks.length}…`;
+      const output = await embedder(allChunks[i].text, { pooling: 'mean', normalize: true });
+      allChunks[i].embedding = Array.from(output.data);
+    }
+    state.semantic.chunks = allChunks;
+    els.semanticProgress.textContent = `Indexed ${allChunks.length} passages across ${state.pages.length} page(s). Ready to search.`;
+    els.semanticQuery.disabled = false; els.semanticSearchRunBtn.disabled = false;
+    showToast('Semantic index built');
+  }catch(e){
+    console.error('Semantic indexing failed', e);
+    els.semanticProgress.textContent = '';
+    showToast('Could not build the semantic index — your browser may not support this, or the model failed to download');
+  }finally{
+    state.semantic.indexing = false;
+    els.semanticIndexBtn.disabled = false;
+  }
+});
+
+async function runSemanticSearch(){
+  const query = els.semanticQuery.value.trim();
+  if (!query){ showToast('Type something to search for'); return; }
+  if (!state.semantic.chunks.length){ showToast('Build the index first'); return; }
+  els.semanticSearchRunBtn.disabled = true;
+  els.semanticResults.innerHTML = '<div style="font-size:12px;color:var(--text-muted);">Searching…</div>';
+  try{
+    const embedder = await getEmbedder();
+    const output = await embedder(query, { pooling: 'mean', normalize: true });
+    const queryVec = Array.from(output.data);
+    const ranked = state.semantic.chunks
+      .map(c => ({ ...c, score: dotProduct(queryVec, c.embedding) }))
+      .sort((a,b) => b.score - a.score)
+      .slice(0, 8);
+    els.semanticResults.innerHTML = '';
+    ranked.forEach(r=>{
+      const div = document.createElement('div'); div.className = 'sem-result';
+      div.innerHTML = `<div class="sem-meta">Page ${r.pageIdx+1} · match ${(r.score*100).toFixed(0)}%</div><div class="sem-snippet">${r.text.slice(0,220).replace(/&/g,'&amp;').replace(/</g,'&lt;')}${r.text.length>220?'…':''}</div>`;
+      div.addEventListener('click', async ()=>{
+        els.semanticModal.classList.remove('open');
+        const pageEntry = state.pages[r.pageIdx];
+        const block = els.pagesContainer.querySelector(`.page-block[data-id="${pageEntry.id}"]`);
+        if (block) block.scrollIntoView({ behavior:'smooth', block:'center' });
+        if (!state.renderedPageIds.has(pageEntry.id)) await renderPageContent(pageEntry);
+      });
+      els.semanticResults.appendChild(div);
+    });
+    if (!ranked.length) els.semanticResults.innerHTML = '<div style="font-size:12px;color:var(--text-muted);">No results.</div>';
+  }catch(e){
+    console.error('Semantic search failed', e);
+    showToast('Search failed — try rebuilding the index');
+  }finally{
+    els.semanticSearchRunBtn.disabled = false;
+  }
+}
+els.semanticSearchRunBtn.addEventListener('click', runSemanticSearch);
+els.semanticQuery.addEventListener('keydown', (e)=>{ if (e.key==='Enter') runSemanticSearch(); });
+els.semanticClearBtn.addEventListener('click', ()=>{
+  state.semantic.chunks = [];
+  els.semanticProgress.textContent = 'Index cleared.';
+  els.semanticResults.innerHTML = '';
+  els.semanticQuery.disabled = true; els.semanticSearchRunBtn.disabled = true;
+  showToast('Semantic index cleared');
 });
 
 /* ================= Export ================= */
@@ -2368,6 +2921,161 @@ els.collabLeaveBtn.addEventListener('click', ()=>{
   showToast('Stopped sharing');
 });
 
+/* ---- Mode toggle between Basic (polling) and Realtime (Yjs/WebRTC, beta) ---- */
+els.collabModeBasic.addEventListener('click', ()=>{
+  els.collabModeBasic.classList.add('primary'); els.collabModeRealtime.classList.remove('primary');
+  els.collabBasicPane.style.display = ''; els.collabRealtimePane.style.display = 'none';
+});
+els.collabModeRealtime.addEventListener('click', ()=>{
+  els.collabModeRealtime.classList.add('primary'); els.collabModeBasic.classList.remove('primary');
+  els.collabRealtimePane.style.display = ''; els.collabBasicPane.style.display = 'none';
+});
+
+/* ================= Realtime collaboration (Yjs + WebRTC, beta) =================
+   This is genuinely the riskiest feature in the app to ship without live
+   browser testing — WebRTC peer connection setup depends on signaling
+   servers, STUN/TURN reachability, and browser-specific quirks that static
+   code review can't fully verify. It's additive (Basic sync above still
+   works exactly as before), heavily defensive, and automatically falls back
+   to Basic sync if peers can't connect within a reasonable window, so a
+   failure here degrades gracefully instead of leaving collaboration broken. */
+state.rt = { active:false, ydoc:null, provider:null, yAnnotations:null, room:null, connectTimeout:null, publishedKeys:new Set() };
+
+async function loadYjsModules(){
+  if (state._yjsModules) return state._yjsModules;
+  const [Y, webrtcMod] = await Promise.all([
+    import('https://cdn.jsdelivr.net/npm/yjs@13.6.18/+esm'),
+    import('https://cdn.jsdelivr.net/npm/y-webrtc@10.3.0/+esm'),
+  ]);
+  state._yjsModules = { Y, WebrtcProvider: webrtcMod.WebrtcProvider };
+  return state._yjsModules;
+}
+
+function annotationKey(pageId, annId){ return pageId + '::' + annId; }
+
+function rtPublishLocalState(){
+  if (!state.rt.active || !state.rt.yAnnotations) return;
+  const ydoc = state.rt.ydoc;
+  ydoc.transact(()=>{
+    const currentKeys = new Set();
+    state.pages.forEach(pageEntry=>{
+      pageEntry.annotations.forEach(ann=>{
+        const key = annotationKey(pageEntry.id, ann.id);
+        currentKeys.add(key);
+        state.rt.yAnnotations.set(key, JSON.stringify({ pageId: pageEntry.id, ann }));
+      });
+    });
+    // Remove keys that no longer exist locally (annotation was deleted/erased).
+    state.rt.publishedKeys.forEach(key=>{
+      if (!currentKeys.has(key)) state.rt.yAnnotations.delete(key);
+    });
+    state.rt.publishedKeys = currentKeys;
+  });
+}
+
+function rtApplyRemoteState(){
+  if (!state.rt.yAnnotations) return;
+  let changed = false;
+  state.rt.yAnnotations.forEach((value, key)=>{
+    try{
+      const { pageId, ann } = JSON.parse(value);
+      const pageEntry = state.pages.find(p=>p.id===pageId);
+      if (!pageEntry) return;
+      const existingIdx = pageEntry.annotations.findIndex(a=>a.id===ann.id);
+      if (existingIdx === -1){ pageEntry.annotations.push(ann); changed = true; }
+      else if (JSON.stringify(pageEntry.annotations[existingIdx]) !== JSON.stringify(ann)){
+        pageEntry.annotations[existingIdx] = ann; changed = true;
+      }
+    }catch(e){ /* malformed/foreign entry — skip */ }
+  });
+  // Remove local annotations whose key vanished from the shared map (remote delete).
+  state.pages.forEach(pageEntry=>{
+    pageEntry.annotations = pageEntry.annotations.filter(ann=>{
+      const key = annotationKey(pageEntry.id, ann.id);
+      const stillShared = state.rt.publishedKeys.has(key) ? state.rt.yAnnotations.has(key) : true;
+      if (!stillShared) changed = true;
+      return stillShared;
+    });
+  });
+  if (changed){ renderAllPages(); showToast('Synced changes from a collaborator'); }
+}
+
+async function startRealtimeSession(room, isHost){
+  els[isHost ? 'rtStartBtn' : 'rtJoinBtn'].disabled = true;
+  document.getElementById('rtStatus').textContent = 'Loading realtime engine…';
+  try{
+    const { Y, WebrtcProvider } = await loadYjsModules();
+    const ydoc = new Y.Doc();
+    const yAnnotations = ydoc.getMap('annotations');
+    const provider = new WebrtcProvider('kvpdf-' + room, ydoc, {
+      signaling: ['wss://signaling.yjs.dev', 'wss://y-webrtc-signaling-eu.herokuapp.com', 'wss://y-webrtc-signaling-us.herokuapp.com'],
+    });
+
+    state.rt = { active:true, ydoc, provider, yAnnotations, room, connectTimeout:null, publishedKeys:new Set() };
+
+    document.getElementById('rtStatus').textContent = `Connecting to room ${room}…`;
+    document.getElementById('rtStatus').classList.add('live');
+
+    let connected = false;
+    provider.on('peers', (info)=>{
+      if (info && info.webrtcPeers && info.webrtcPeers.length > 0 && !connected){
+        connected = true;
+        clearTimeout(state.rt.connectTimeout);
+        document.getElementById('rtStatus').textContent = `Connected — ${info.webrtcPeers.length} peer(s) in room ${room}.`;
+      }
+    });
+
+    yAnnotations.observe(()=> rtApplyRemoteState());
+    rtPublishLocalState();
+
+    state.rt.connectTimeout = setTimeout(()=>{
+      if (!connected){
+        showToast('Realtime peers unreachable — falling back to Basic sync');
+        stopRealtimeSession();
+        els.collabModeBasic.click();
+        if (isHost) els.collabStartBtn.click(); else { els.collabJoinCode.value = room; els.collabJoinBtn.click(); }
+      }
+    }, 15000);
+
+    showToast(isHost ? `Realtime room created: ${room}` : `Joining realtime room ${room}…`);
+  }catch(e){
+    console.error('Realtime collaboration failed to start', e);
+    showToast('Realtime sync failed to load — use Basic sync instead');
+    document.getElementById('rtStatus').textContent = 'Failed to connect.';
+    stopRealtimeSession();
+  }finally{
+    els.rtStartBtn.disabled = false; els.rtJoinBtn.disabled = false;
+  }
+}
+function stopRealtimeSession(){
+  clearTimeout(state.rt.connectTimeout);
+  try{ if (state.rt.provider) state.rt.provider.destroy(); }catch(e){}
+  try{ if (state.rt.ydoc) state.rt.ydoc.destroy(); }catch(e){}
+  state.rt = { active:false, ydoc:null, provider:null, yAnnotations:null, room:null, connectTimeout:null, publishedKeys:new Set() };
+  document.getElementById('rtStatus').textContent = 'Not connected.';
+  document.getElementById('rtStatus').classList.remove('live');
+}
+els.rtStartBtn.addEventListener('click', ()=>{
+  if (!state.pages.length){ showToast('Open a PDF first'); return; }
+  startRealtimeSession(genShareCode(), true);
+});
+els.rtJoinBtn.addEventListener('click', ()=>{
+  const room = els.rtJoinCode.value.trim().toUpperCase();
+  if (!room){ showToast('Enter a room code'); return; }
+  if (!state.pages.length){ showToast('Open the same PDF first, then join'); return; }
+  startRealtimeSession(room, false);
+});
+els.rtLeaveBtn.addEventListener('click', ()=>{
+  stopRealtimeSession();
+  showToast('Left the realtime session');
+});
+// Publish local edits to the realtime room whenever history changes, if active.
+const _origPushHistoryForRt = pushHistory;
+pushHistory = function(label){
+  _origPushHistoryForRt(label);
+  if (state.rt.active) rtPublishLocalState();
+};
+
 /* ================= Batch processing ================= */
 els.batchBtn.addEventListener('click', ()=> els.batchModal.classList.add('open'));
 els.batchCloseBtn.addEventListener('click', ()=> els.batchModal.classList.remove('open'));
@@ -2604,12 +3312,14 @@ els.addBookmarkBtn.addEventListener('click', ()=>{
 /* ================= Extract text / export images ================= */
 els.extractTextBtn.addEventListener('click', async ()=>{
   if (!state.pages.length){ showToast('Open a PDF first'); return; }
+  showToast('Gathering text…');
+  await prefetchAllTextContent();
   let out = '';
   for (let i=0;i<state.pages.length;i++){
     const pageEntry = state.pages[i];
     let text = '';
-    const tl = state.textLayers[pageEntry.id];
-    if (tl){ text = tl.items.map(it=>it.str).join(' '); }
+    const cached = state.textContentCache[pageEntry.id];
+    if (cached){ text = cached.items.map(it=>it.str).join(' '); }
     if ((!text || !text.trim()) && state.ocrCache[pageEntry.id]){ text = state.ocrCache[pageEntry.id].text; }
     out += `--- Page ${i+1} ---\n${text.trim()}\n\n`;
   }
@@ -2776,8 +3486,13 @@ if ('serviceWorker' in navigator){
 }
 
 /* ================= What's New ================= */
-const WHATS_NEW_VERSION = '2026-08-15';
+const WHATS_NEW_VERSION = '2026-08-16';
 const WHATS_NEW_ITEMS = [
+  { title: 'Find & redact by pattern', body: 'Scan the whole document for emails, phone numbers, SSNs, and credit card numbers, review each hit, and redact them for real in one pass.' },
+  { title: 'Table extraction from OCR', body: 'Pull a table out of a scanned page as a CSV — a positional best-effort, works great on clean tables.' },
+  { title: 'Handles large documents better', body: 'Pages now render only as you scroll near them, so opening a big PDF is faster and lighter on memory.' },
+  { title: 'Semantic search (experimental)', body: 'Search by meaning, not just exact words, using a small AI model that runs entirely in your browser.' },
+  { title: "Realtime collaboration (beta)", body: "A peer-to-peer live-sync option alongside the existing basic sync — falls back automatically if it cannot connect." },
   { title: 'OCR for scanned pages', body: 'Recognize text on image-only pages and optionally embed it as invisible, searchable text on export.' },
   { title: 'Compare two PDFs', body: 'A word-level text diff between two documents, page by page.' },
   { title: 'Bookmarks & real links', body: 'View a PDF\'s existing outline, add your own bookmarks, and draw clickable link annotations — both become real, navigable PDF objects on export.' },
