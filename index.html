@@ -150,6 +150,10 @@ input[type="text"],input[type="number"],select,textarea{font-family:var(--sans);
 #emptyState h2{font-family:var(--mono);font-weight:500;font-size:16px;color:var(--text);margin:0;}
 #emptyState p{font-size:13px;margin:0;max-width:320px;line-height:1.5;}
 #pagesContainer{display:flex;flex-direction:column;align-items:center;gap:28px;}
+#zoomControls{position:fixed;bottom:24px;right:24px;z-index:24;display:flex;align-items:center;gap:2px;background:var(--panel-2);border:1px solid var(--border);border-radius:10px;padding:4px;box-shadow:0 8px 24px rgba(0,0,0,0.4);}
+#zoomControls button{padding:0;}
+#zoomControls .icon-btn{font-size:16px;font-weight:600;}
+#zoomResetBtn{font-family:var(--mono);font-size:11px;padding:0 10px;height:32px;min-width:52px;}
 .page-block{display:flex;flex-direction:column;align-items:center;gap:8px;}
 .page-scale-box{position:relative;}
 .page-canvas-wrap{position:relative;box-shadow:0 8px 28px rgba(0,0,0,0.45);background:#fff;}
@@ -202,7 +206,9 @@ input[type="text"],input[type="number"],select,textarea{font-family:var(--sans);
 #pagesPanel{width:190px;background:var(--panel);border-left:1px solid var(--border);display:flex;flex-direction:column;flex-shrink:0;}
 .panel-header{font-family:var(--mono);font-size:11px;letter-spacing:1px;color:var(--text-muted);padding:14px 14px 10px;text-transform:uppercase;}
 #thumbList{flex:1;overflow-y:auto;padding:0 10px;display:flex;flex-direction:column;gap:10px;}
-.thumb-item{position:relative;border:1px solid var(--border);border-radius:6px;background:var(--panel-2);padding:6px;cursor:pointer;}
+.thumb-item{position:relative;border:1px solid var(--border);border-radius:6px;background:var(--panel-2);padding:6px;cursor:pointer;transition:opacity .12s,border-color .12s;}
+.thumb-item.dragging{opacity:0.4;}
+.thumb-item.drag-over{border-color:var(--accent);box-shadow:0 0 0 2px var(--accent-soft);}
 .thumb-check{position:absolute;top:8px;left:8px;z-index:2;width:15px;height:15px;}
 .thumb-canvas-wrap{width:100%;display:flex;justify-content:center;background:#0c0d10;border-radius:3px;overflow:hidden;}
 .thumb-canvas-wrap canvas{max-width:100%;display:block;}
@@ -335,6 +341,7 @@ input[type="text"],input[type="number"],select,textarea{font-family:var(--sans);
 @media (max-width: 860px){
   .mobile-only{display:inline-flex;}
   #body{flex-direction:column;}
+  #zoomControls{bottom:70px;right:12px;}
   #toolrail{
     flex-direction:row;width:100%;height:auto;max-height:none;padding:6px 8px;
     overflow-x:auto;overflow-y:hidden;order:3;position:sticky;bottom:0;z-index:22;
@@ -362,6 +369,28 @@ input[type="text"],input[type="number"],select,textarea{font-family:var(--sans);
 @media (max-width: 480px){
   .brand .tag{display:none;}
   #topbar .actions button.primary{padding:7px 10px;font-size:12px;}
+  .mobile-hide-print{display:none;}
+}
+
+/* ---- Print ---- */
+@media print{
+  #topbar, #toolrail, #pagesPanel, #zoomControls, .toast, .modal-overlay,
+  .side-panel, #docMenu, #searchBar, #restoreBanner, .sr-only{ display:none !important; }
+  html, body, #app, #body, #canvasArea{ background:#fff !important; overflow:visible !important; height:auto !important; }
+  #canvasArea{ padding:0 !important; }
+  #pagesContainer{ gap:0 !important; }
+  .page-block{ break-inside:avoid; break-after:page; gap:0 !important; }
+  .page-block:last-child{ break-after:auto; }
+  .page-label{ display:none; }
+  .page-scale-box{ width:auto !important; height:auto !important; }
+  .page-canvas-wrap{ transform:none !important; box-shadow:none !important; }
+  .crop{ display:none !important; }
+  .overlay-canvas{ cursor:default !important; }
+  /* Keep annotation content, drop editing-only chrome */
+  .cf-del, .cf-req, .image-handle, .note-marker, .link-box .link-tag{ display:none !important; }
+  .custom-field-box, .link-box{ border:none !important; background:transparent !important; }
+  .text-annot{ border-color:transparent !important; background:transparent !important; }
+  .form-field{ border:1px solid #999 !important; background:transparent !important; color:#000 !important; }
 }
 </style>
 </head>
@@ -388,6 +417,9 @@ input[type="text"],input[type="number"],select,textarea{font-family:var(--sans);
       </button>
       <button id="docMenuBtn" class="icon-btn" title="Watermark, page size, export options" aria-label="Watermark, page size, export options">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M4 6h16M4 12h16M4 18h10"/></svg>
+      </button>
+      <button id="printBtn" class="icon-btn mobile-hide-print" title="Print (Ctrl+P)" aria-label="Print">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M6 9V3h12v6"/><rect x="4" y="9" width="16" height="8" rx="1.5"/><path d="M6 17v4h12v-4"/></svg>
       </button>
       <button id="historyBtn" class="icon-btn" title="History" aria-label="History">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="12" cy="12" r="8.5"/><path d="M12 7v5l3.5 2"/></svg>
@@ -469,6 +501,15 @@ input[type="text"],input[type="number"],select,textarea{font-family:var(--sans);
       </div>
 
       <div id="docMenu">
+        <h3>Document properties</h3>
+        <div class="field-row"><label>Title</label><input type="text" id="metaTitle" placeholder="(none)" aria-label="Document title"></div>
+        <div class="row2">
+          <div class="field-row"><label>Author</label><input type="text" id="metaAuthor" placeholder="(none)" aria-label="Document author"></div>
+          <div class="field-row"><label>Subject</label><input type="text" id="metaSubject" placeholder="(none)" aria-label="Document subject"></div>
+        </div>
+        <div class="field-row"><label>Keywords (comma-separated)</label><input type="text" id="metaKeywords" placeholder="e.g. contract, 2026, draft" aria-label="Document keywords"></div>
+        <div class="field-row" style="font-size:10.5px;color:var(--text-muted);">Saved into the file when you export — doesn't change the currently-open view.</div>
+        <hr>
         <h3>Watermark</h3>
         <div class="field-row"><label>Text</label><input type="text" id="wmText" placeholder="e.g. DRAFT, CONFIDENTIAL" aria-label="Watermark text"></div>
         <div class="row2">
@@ -581,6 +622,11 @@ input[type="text"],input[type="number"],select,textarea{font-family:var(--sans);
         <button id="emptyOpenBtn" class="primary" data-i18n="open_pdf">Open PDF</button>
       </div>
       <div id="pagesContainer"></div>
+      <div id="zoomControls">
+        <button id="zoomOutBtn" class="icon-btn" title="Zoom out (-)" aria-label="Zoom out">−</button>
+        <button id="zoomResetBtn" title="Reset to fit width (0)" aria-label="Reset zoom to fit width"><span id="zoomLevelLabel">100%</span></button>
+        <button id="zoomInBtn" class="icon-btn" title="Zoom in (+)" aria-label="Zoom in">+</button>
+      </div>
     </main>
 
     <aside id="pagesPanel">
@@ -828,7 +874,7 @@ const state = {
   textLayers: {}, search: { query:'', matches:[], current:-1 },
   autosaveDisabled: false, autosaveTimer: null, pendingRestore: null,
   imageCache: new Map(), selectedPageIds: new Set(), blankSourceId: null,
-  renderedPageIds: new Set(), textContentCache: {},
+  renderedPageIds: new Set(), textContentCache: {}, zoomLevel: 1,
   labeledHistory: [], theme: 'dark',
   bookmarks: [], existingOutline: null,
   compareA: null, compareB: null,
@@ -858,6 +904,8 @@ const els = {};
  'rtStartBtn','rtJoinCode','rtJoinBtn','rtStatus','rtLeaveBtn',
  'themeToggleBtn','extractTextBtn','imgExportFormat','imgExportDpi','exportImagesBtn',
  'pagesPanelToggleBtn','pagesPanelCloseBtn',
+ 'zoomOutBtn','zoomInBtn','zoomResetBtn','zoomLevelLabel',
+ 'metaTitle','metaAuthor','metaSubject','metaKeywords','printBtn',
  'whatsNewLink','whatsNewModal','whatsNewList','whatsNewCloseBtn','langSelect',
  'findRedactBtn','findRedactModal','frPatternEmail','frPatternPhone','frPatternSSN','frPatternCC',
  'semanticSearchBtn','semanticModal','semanticIndexBtn','semanticProgress','semanticQuery',
@@ -1134,6 +1182,9 @@ window.addEventListener('keydown', (e)=>{
   if (e.key === 'PageUp'){ e.preventDefault(); scrollByPage(-1); return; }
   if (e.key === 'Home'){ e.preventDefault(); els.pagesContainer.firstElementChild && els.pagesContainer.firstElementChild.scrollIntoView({behavior:'smooth'}); return; }
   if (e.key === 'End'){ e.preventDefault(); els.pagesContainer.lastElementChild && els.pagesContainer.lastElementChild.scrollIntoView({behavior:'smooth'}); return; }
+  if (e.key === '+' || e.key === '='){ e.preventDefault(); setZoom(state.zoomLevel + 0.15); return; }
+  if (e.key === '-'){ e.preventDefault(); setZoom(state.zoomLevel - 0.15); return; }
+  if (e.key === '0'){ e.preventDefault(); setZoom(1); return; }
   const pressed = e.key.toLowerCase();
   if (pressed === state.keyMap.ocr){ e.preventDefault(); runOcrCurrentPage(); return; }
   const entry = Object.entries(state.keyMap).find(([tool,key])=> key===pressed && tool!=='ocr');
@@ -1211,6 +1262,14 @@ async function openFile(file, reset){
       state.textContentCache = {}; state.ocrCache = {};
       state.fileBaseName = file.name.replace(/\.pdf$/i,''); state.autosaveDisabled = false;
       els.fileInfo.textContent = file.name;
+      try{
+        const meta = await pdfjsDoc.getMetadata();
+        const info = (meta && meta.info) || {};
+        els.metaTitle.value = info.Title || '';
+        els.metaAuthor.value = info.Author || '';
+        els.metaSubject.value = info.Subject || '';
+        els.metaKeywords.value = info.Keywords || '';
+      }catch(e){ els.metaTitle.value=''; els.metaAuthor.value=''; els.metaSubject.value=''; els.metaKeywords.value=''; }
     }
     for (let i=0;i<pdfjsDoc.numPages;i++){
       state.pages.push({ id: genId(), sourceId, origIndex: i, rotation: 0, annotations: [], watermark: null });
@@ -1286,8 +1345,9 @@ function applyResponsiveScale(){
     const naturalW = parseFloat(wrap.dataset.naturalWidth);
     const naturalH = parseFloat(wrap.dataset.naturalHeight);
     if (!naturalW || !naturalH) return;
-    const scale = Math.min(1, available / naturalW);
-    if (scale < 1){
+    const baseFit = Math.min(1, available / naturalW);
+    const scale = baseFit * state.zoomLevel;
+    if (Math.abs(scale - 1) > 0.001){
       wrap.style.transform = `scale(${scale})`;
       wrap.style.transformOrigin = 'top left';
       scaleBox.style.width = Math.round(naturalW*scale) + 'px';
@@ -1298,6 +1358,14 @@ function applyResponsiveScale(){
     }
   });
 }
+function setZoom(level){
+  state.zoomLevel = Math.max(0.4, Math.min(3, level));
+  els.zoomLevelLabel.textContent = Math.round(state.zoomLevel*100) + '%';
+  applyResponsiveScale();
+}
+els.zoomInBtn.addEventListener('click', ()=> setZoom(state.zoomLevel + 0.15));
+els.zoomOutBtn.addEventListener('click', ()=> setZoom(state.zoomLevel - 0.15));
+els.zoomResetBtn.addEventListener('click', ()=> setZoom(1));
 let _resizeTimer = null;
 window.addEventListener('resize', ()=>{
   clearTimeout(_resizeTimer);
@@ -2038,6 +2106,8 @@ async function renderThumbs(){
   for (let i=0;i<state.pages.length;i++){
     const pageEntry = state.pages[i];
     const item = document.createElement('div'); item.className='thumb-item';
+    item.draggable = true;
+    item.dataset.index = i;
 
     const chk = document.createElement('input'); chk.type='checkbox'; chk.className='thumb-check';
     chk.checked = state.selectedPageIds.has(pageEntry.id);
@@ -2057,21 +2127,51 @@ async function renderThumbs(){
     const num = document.createElement('div'); num.className='thumb-num'; num.textContent=`${i+1}`;
     const actions = document.createElement('div'); actions.className='thumb-actions';
     actions.appendChild(iconBtn('rotate', ()=>mutatePage(pageEntry, p=>p.rotation=(p.rotation+90)%360)));
+    actions.appendChild(iconBtn('duplicate', ()=>duplicatePage(i)));
     actions.appendChild(iconBtn('up', ()=>movePage(i,-1), i===0));
     actions.appendChild(iconBtn('down', ()=>movePage(i,1), i===state.pages.length-1));
     actions.appendChild(iconBtn('trash', ()=>deletePage(i)));
     row.appendChild(num); row.appendChild(actions);
     item.appendChild(cwrap); item.appendChild(row);
     item.addEventListener('click', (e)=>{ if (e.target.closest('button')||e.target===chk) return; const block=els.pagesContainer.children[i]; if(block) block.scrollIntoView({behavior:'smooth',block:'center'}); els.pagesPanel.classList.remove('mobile-open'); });
+
+    item.addEventListener('dragstart', (e)=>{ item.classList.add('dragging'); e.dataTransfer.effectAllowed='move'; e.dataTransfer.setData('text/plain', String(i)); });
+    item.addEventListener('dragend', ()=> item.classList.remove('dragging'));
+    item.addEventListener('dragover', (e)=>{ e.preventDefault(); item.classList.add('drag-over'); });
+    item.addEventListener('dragleave', ()=> item.classList.remove('drag-over'));
+    item.addEventListener('drop', async (e)=>{
+      e.preventDefault(); item.classList.remove('drag-over');
+      const fromIdx = parseInt(e.dataTransfer.getData('text/plain'), 10);
+      const toIdx = parseInt(item.dataset.index, 10);
+      if (isNaN(fromIdx) || fromIdx === toIdx) return;
+      const [moved] = state.pages.splice(fromIdx, 1);
+      state.pages.splice(toIdx, 0, moved);
+      pushHistory('Reordered pages');
+      await renderAllPages(); await renderThumbs();
+    });
+
     els.thumbList.appendChild(item);
   }
   updateBulkActions();
   updatePageNavUI();
 }
+async function duplicatePage(index){
+  const original = state.pages[index];
+  const cloned = {
+    id: genId(), sourceId: original.sourceId, origIndex: original.origIndex, rotation: original.rotation,
+    annotations: JSON.parse(JSON.stringify(original.annotations)).map(a => ({ ...a, id: genId() })),
+    watermark: original.watermark ? JSON.parse(JSON.stringify(original.watermark)) : null,
+  };
+  state.pages.splice(index+1, 0, cloned);
+  pushHistory('Duplicated page');
+  await renderAllPages(); await renderThumbs();
+  showToast('Page duplicated');
+}
 function iconBtn(kind, onClick, disabled){
   const b = document.createElement('button'); b.disabled=!!disabled;
   const icons = {
     rotate:'<path d="M4 4v6h6"/><path d="M20 20a9 9 0 0 0-15-6.7L4 10"/>',
+    duplicate:'<rect x="8" y="8" width="12" height="12" rx="1.5"/><path d="M4 16V5a1 1 0 0 1 1-1h11"/>',
     up:'<path d="M12 19V5"/><path d="M5 12l7-7 7 7"/>',
     down:'<path d="M12 5v14"/><path d="M19 12l-7 7-7-7"/>',
     trash:'<path d="M4 7h16"/><path d="M9 7V4h6v3"/><path d="M6 7l1 13h10l1-13"/>',
@@ -2586,6 +2686,12 @@ els.semanticClearBtn.addEventListener('click', ()=>{
 
 /* ================= Export ================= */
 els.exportBtn.addEventListener('click', ()=>exportPdf());
+els.printBtn.addEventListener('click', async ()=>{
+  if (!state.pages.length){ showToast('Open a PDF first'); return; }
+  showToast('Preparing all pages for print…');
+  await ensureAllPagesRendered();
+  window.print();
+});
 
 function pageNeedsRaster(pageEntry){ return pageEntry.rotation!==0 || pageEntry.annotations.some(a=>a.type==='redact'); }
 
@@ -2812,6 +2918,15 @@ async function exportPdf(pagesOverride, filenameSuffix){
       }
       form.updateFieldAppearances();
     }catch(e){}
+
+    try{
+      if (els.metaTitle.value.trim()) outDoc.setTitle(els.metaTitle.value.trim());
+      if (els.metaAuthor.value.trim()) outDoc.setAuthor(els.metaAuthor.value.trim());
+      if (els.metaSubject.value.trim()) outDoc.setSubject(els.metaSubject.value.trim());
+      if (els.metaKeywords.value.trim()) outDoc.setKeywords(els.metaKeywords.value.split(',').map(k=>k.trim()).filter(Boolean));
+      outDoc.setProducer('KVPDF (asrbmy.github.io/kvpdf)');
+      outDoc.setModificationDate(new Date());
+    }catch(e){ console.warn('Could not set document metadata', e); }
 
     const bytes = await outDoc.save();
     const blob = new Blob([bytes], { type:'application/pdf' });
@@ -3486,8 +3601,13 @@ if ('serviceWorker' in navigator){
 }
 
 /* ================= What's New ================= */
-const WHATS_NEW_VERSION = '2026-08-16';
+const WHATS_NEW_VERSION = '2026-08-17';
 const WHATS_NEW_ITEMS = [
+  { title: 'Zoom controls', body: 'Zoom in and out independently of the fit-to-width view, with +/-/0 shortcuts.' },
+  { title: 'Drag to reorder pages', body: 'Drag thumbnails directly to reorder pages, alongside the existing up/down buttons.' },
+  { title: 'Duplicate page', body: 'One click to duplicate a page, annotations included.' },
+  { title: 'Document properties', body: 'Edit the Title, Author, Subject, and Keywords saved into the exported PDF.' },
+  { title: 'Print', body: 'A proper print button — renders every page first, prints just the document, not the app chrome.' },
   { title: 'Find & redact by pattern', body: 'Scan the whole document for emails, phone numbers, SSNs, and credit card numbers, review each hit, and redact them for real in one pass.' },
   { title: 'Table extraction from OCR', body: 'Pull a table out of a scanned page as a CSV — a positional best-effort, works great on clean tables.' },
   { title: 'Handles large documents better', body: 'Pages now render only as you scroll near them, so opening a big PDF is faster and lighter on memory.' },
@@ -3495,10 +3615,10 @@ const WHATS_NEW_ITEMS = [
   { title: "Realtime collaboration (beta)", body: "A peer-to-peer live-sync option alongside the existing basic sync — falls back automatically if it cannot connect." },
   { title: 'OCR for scanned pages', body: 'Recognize text on image-only pages and optionally embed it as invisible, searchable text on export.' },
   { title: 'Compare two PDFs', body: 'A word-level text diff between two documents, page by page.' },
-  { title: 'Bookmarks & real links', body: 'View a PDF\'s existing outline, add your own bookmarks, and draw clickable link annotations — both become real, navigable PDF objects on export.' },
+  { title: 'Bookmarks & real links', body: "View a PDF's existing outline, add your own bookmarks, and draw clickable link annotations — both become real, navigable PDF objects on export." },
   { title: 'Batch processing', body: 'Apply the same watermark, page size, and page numbers to a whole folder of PDFs at once, downloaded as a .zip.' },
   { title: 'Works offline', body: 'After your first visit, KVPDF keeps working without a connection.' },
-  { title: 'Named history & remappable shortcuts', body: 'Jump back to any past edit by name, and rebind any tool\'s keyboard shortcut.' },
+  { title: 'Named history & remappable shortcuts', body: "Jump back to any past edit by name, and rebind any tool's keyboard shortcut." },
   { title: 'Light theme, mobile layout', body: 'A light mode, plus a genuinely usable mobile layout — pages now scale to fit your screen.' },
 ];
 function renderWhatsNew(){

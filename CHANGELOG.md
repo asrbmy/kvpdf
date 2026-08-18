@@ -5,6 +5,13 @@ All notable changes to KVPDF are documented here. Dates reflect when each batch 
 ## [Unreleased]
 
 ### Added
+- **Zoom controls**: independent zoom in/out (`+`/`-`/`0` shortcuts, floating widget) on top of the existing fit-to-width behavior.
+- **Drag-to-reorder pages**: native drag-and-drop on thumbnails, alongside the existing up/down buttons (kept for keyboard accessibility).
+- **Duplicate page**: one-click duplicate, including a deep copy of that page's annotations with fresh IDs.
+- **Document properties editor**: Title/Author/Subject/Keywords, read from the PDF on open and written back via pdf-lib on export (plus Producer/ModDate).
+- **Print**: a real print button — force-renders every page (reusing the virtualization-era `ensureAllPagesRendered()` helper) and ships a dedicated print stylesheet that hides all app chrome and strips editing-only visual affordances (delete buttons, resize handles, dashed field outlines) so what prints is the document, not the editor.
+
+### Added (previous batch)
 - **Find & redact by pattern**: scans the whole document (real text and anything OCR'd) for emails, phone numbers, SSNs, and Luhn-validated credit card numbers, or a custom regex — review every hit before committing, then redact for real via the existing true-rasterization redaction.
 - **Structured table extraction**: clusters OCR word positions into a row/column grid and exports CSV. A positional heuristic, not a trained model — documented as such in the UI.
 - **Virtualized rendering**: pages now build in two phases — an instant, correctly-sized placeholder for every page, then the expensive canvas+layers render only for pages near the viewport (via `IntersectionObserver`). Search, text extraction, and find-and-redact were all audited and fixed to stay correct regardless of what's visually rendered (search/extract use a lightweight background text prefetch; find-and-redact force-renders before scanning, since it needs real geometry).
