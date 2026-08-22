@@ -131,6 +131,16 @@ input[type="text"],input[type="number"],select,textarea{font-family:var(--sans);
 /* ---- Body layout ---- */
 #body{flex:1;display:flex;overflow:hidden;position:relative;}
 
+/* ---- Document tabs ---- */
+#docTabs{display:none;align-items:center;gap:6px;height:38px;padding:0 10px;background:var(--panel);border-bottom:1px solid var(--border);flex-shrink:0;}
+#docTabs.show{display:flex;}
+#docTabsList{display:flex;gap:4px;flex:1;min-width:0;overflow-x:auto;height:100%;align-items:flex-end;}
+.doc-tab{display:flex;align-items:center;gap:6px;padding:6px 6px 6px 12px;border-radius:6px 6px 0 0;background:var(--panel-2);border:1px solid var(--border);border-bottom:none;font-size:12px;color:var(--text-muted);white-space:nowrap;cursor:pointer;max-width:180px;flex-shrink:0;}
+.doc-tab span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.doc-tab.active{background:var(--bg);border-color:var(--accent);color:var(--text);}
+.doc-tab .doc-tab-close{padding:0;width:16px;height:16px;border-radius:50%;font-size:11px;line-height:1;background:transparent;border:none;color:inherit;flex-shrink:0;display:flex;align-items:center;justify-content:center;}
+.doc-tab .doc-tab-close:hover{background:rgba(255,255,255,0.15);}
+
 /* ---- Tool rail ---- */
 #toolrail{width:56px;background:var(--panel);border-right:1px solid var(--border);display:flex;flex-direction:column;align-items:center;padding:12px 0;gap:4px;flex-shrink:0;overflow-y:auto;}
 .tool-btn{width:38px;height:38px;border-radius:8px;background:transparent;border:1px solid transparent;color:var(--text-muted);display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0;}
@@ -257,6 +267,10 @@ input[type="text"],input[type="number"],select,textarea{font-family:var(--sans);
 .modal{background:var(--panel-2);border:1px solid var(--border);border-radius:12px;padding:18px;}
 .modal h3{margin:0 0 12px;font-family:var(--mono);font-size:13px;color:var(--text);}
 #sigCanvas{background:#fff;border-radius:6px;touch-action:none;cursor:crosshair;display:block;}
+.sig-lib-item{position:relative;width:100px;height:50px;background:#fff;border:1.5px solid var(--border);border-radius:6px;cursor:pointer;overflow:hidden;}
+.sig-lib-item:hover{border-color:var(--accent);}
+.sig-lib-item img{width:100%;height:100%;object-fit:contain;}
+.sig-lib-item .sig-lib-del{position:absolute;top:-6px;right:-6px;width:18px;height:18px;border-radius:50%;background:var(--danger);color:#fff;border:none;font-size:11px;line-height:1;cursor:pointer;}
 .modal .btn-row{display:flex;gap:8px;margin-top:12px;}
 .modal .btn-row button{flex:1;}
 
@@ -459,6 +473,11 @@ input[type="text"],input[type="number"],select,textarea{font-family:var(--sans);
     </div>
   </header>
 
+  <div id="docTabs">
+    <div id="docTabsList"></div>
+    <button id="addDocTabBtn" class="icon-btn" title="Open another document" aria-label="Open another document">+</button>
+  </div>
+
   <div id="body">
     <aside id="toolrail" role="toolbar" aria-label="Editing tools">
       <button class="tool-btn active" data-tool="pointer" data-i18n-title="tool_pointer" title="Select text / fill forms (V)" aria-label="Select text / fill forms (V)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M5 3l14 8-6 1.5L11 19z"/></svg></button>
@@ -502,6 +521,7 @@ input[type="text"],input[type="number"],select,textarea{font-family:var(--sans);
 
       <div id="docMenu">
         <h3>Document properties</h3>
+        <div class="field-row"><label>Export filename</label><input type="text" id="exportFilename" placeholder="document" aria-label="Export filename (without .pdf)"></div>
         <div class="field-row"><label>Title</label><input type="text" id="metaTitle" placeholder="(none)" aria-label="Document title"></div>
         <div class="row2">
           <div class="field-row"><label>Author</label><input type="text" id="metaAuthor" placeholder="(none)" aria-label="Document author"></div>
@@ -511,12 +531,23 @@ input[type="text"],input[type="number"],select,textarea{font-family:var(--sans);
         <div class="field-row" style="font-size:10.5px;color:var(--text-muted);">Saved into the file when you export — doesn't change the currently-open view.</div>
         <hr>
         <h3>Watermark</h3>
-        <div class="field-row"><label>Text</label><input type="text" id="wmText" placeholder="e.g. DRAFT, CONFIDENTIAL" aria-label="Watermark text"></div>
         <div class="row2">
-          <div class="field-row"><label>Color</label><select id="wmColor" aria-label="Watermark color"></select></div>
+          <button id="wmModeText" class="primary" style="flex:1;font-size:12px;">Text</button>
+          <button id="wmModeImage" style="flex:1;font-size:12px;">Image</button>
+        </div>
+        <div id="wmTextControls">
+          <div class="field-row"><label>Text</label><input type="text" id="wmText" placeholder="e.g. DRAFT, CONFIDENTIAL" aria-label="Watermark text"></div>
+        </div>
+        <div id="wmImageControls" style="display:none;">
+          <div class="field-row"><label>Image</label><button id="wmImagePick" style="width:100%;">Choose image…</button></div>
+          <div id="wmImageName" style="font-size:10.5px;color:var(--text-muted);"></div>
+        </div>
+        <div class="row2">
+          <div class="field-row" id="wmColorRow"><label>Color</label><select id="wmColor" aria-label="Watermark color"></select></div>
           <div class="field-row"><label>Opacity</label><input type="range" id="wmOpacity" min="5" max="60" value="20" aria-label="Watermark opacity"></div>
         </div>
         <div class="btn-row"><button id="wmApply" class="primary">Apply to all pages</button><button id="wmRemove">Remove</button></div>
+        <input type="file" id="wmImageInput" accept="image/*" hidden>
         <hr>
         <h3>Page numbers</h3>
         <div class="field-row"><label class="checkbox-row"><input type="checkbox" id="pnEnable"> Add page numbers on export</label></div>
@@ -532,7 +563,19 @@ input[type="text"],input[type="number"],select,textarea{font-family:var(--sans);
             <option value="original">Keep original sizes</option>
             <option value="a4">A4 (595 × 842 pt)</option>
             <option value="letter">US Letter (612 × 792 pt)</option>
+            <option value="custom">Custom…</option>
           </select>
+        </div>
+        <div id="customPageSizeRow" class="row2" style="display:none;">
+          <div class="field-row"><label>Width</label><input type="number" id="customPageWidth" min="1" step="0.1" value="8.5" aria-label="Custom page width"></div>
+          <div class="field-row"><label>Height</label><input type="number" id="customPageHeight" min="1" step="0.1" value="11" aria-label="Custom page height"></div>
+          <div class="field-row"><label>Unit</label>
+            <select id="customPageUnit" aria-label="Custom page size unit">
+              <option value="in">inches</option>
+              <option value="mm">millimeters</option>
+              <option value="pt">points</option>
+            </select>
+          </div>
         </div>
         <div class="field-row">
           <label>Export quality</label>
@@ -540,6 +583,12 @@ input[type="text"],input[type="number"],select,textarea{font-family:var(--sans);
             <option value="standard">Standard (crisper, larger file)</option>
             <option value="small">Smaller file (compressed)</option>
           </select>
+        </div>
+        <div class="field-row">
+          <label class="checkbox-row"><input type="checkbox" id="aggressiveCompress"> Aggressively shrink file size</label>
+        </div>
+        <div class="field-row" style="font-size:10.5px;color:var(--text-muted);line-height:1.5;">
+          The "Smaller file" option above only affects annotations you've added — it can't touch images already embedded in the original PDF, which are usually the real source of a bloated file. This does: it re-renders every page as a compressed image, which can shrink a scan-heavy PDF a lot, but every page loses selectable/searchable text in the process (same trade-off as redaction). Good for "just make this smaller to email," not for documents you still need to search.
         </div>
         <hr>
         <h3>Extract</h3>
@@ -651,12 +700,21 @@ input[type="text"],input[type="number"],select,textarea{font-family:var(--sans);
 
 <div class="modal-overlay" id="sigModal" role="dialog" aria-modal="true" aria-labelledby="sigModalTitle">
   <div class="modal">
-    <h3 id="sigModalTitle">Draw your signature</h3>
+    <h3 id="sigModalTitle">Signatures</h3>
+    <div id="sigLibrary" style="display:none;margin-bottom:10px;">
+      <div style="font-size:11px;color:var(--text-muted);margin-bottom:6px;font-family:var(--mono);">SAVED SIGNATURES</div>
+      <div id="sigLibraryList" style="display:flex;flex-wrap:wrap;gap:8px;"></div>
+      <hr>
+    </div>
+    <div style="font-size:11px;color:var(--text-muted);margin-bottom:6px;font-family:var(--mono);">DRAW NEW</div>
     <canvas id="sigCanvas" width="420" height="160"></canvas>
     <div class="btn-row">
       <button id="sigClear">Clear</button>
+      <button id="sigSaveToLibrary">Save to library</button>
+    </div>
+    <div class="btn-row">
       <button id="sigCancel">Cancel</button>
-      <button id="sigUse" class="primary">Use signature</button>
+      <button id="sigUse" class="primary">Use this signature</button>
     </div>
   </div>
 </div>
@@ -860,6 +918,16 @@ async function loadTesseract(){
 const COLORS = ['#4C7EFF','#F0A93B','#E5566B','#3FBF7F','#EDEEF0','#1B1D22'];
 const TARGET_WIDTH = 780;
 const PAGE_SIZES = { a4: { width: 595.28, height: 841.89 }, letter: { width: 612, height: 792 } };
+const UNIT_TO_PT = { in: 72, mm: 72/25.4, pt: 1 };
+function resolvePageSize(sizeMode){
+  if (sizeMode === 'custom'){
+    const unit = UNIT_TO_PT[els.customPageUnit.value] || 1;
+    const w = Math.max(1, parseFloat(els.customPageWidth.value) || 8.5) * unit;
+    const h = Math.max(1, parseFloat(els.customPageHeight.value) || 11) * unit;
+    return { width: w, height: h };
+  }
+  return PAGE_SIZES[sizeMode];
+}
 const QUALITY = { standard: { scale: 2.5, jpegQuality: 0.9 }, small: { scale: 1.4, jpegQuality: 0.6 } };
 const SESSION_KEY = 'kvpdf:session';
 const SRC_KEY = id => 'kvpdf:src:' + id;
@@ -875,6 +943,7 @@ const state = {
   autosaveDisabled: false, autosaveTimer: null, pendingRestore: null,
   imageCache: new Map(), selectedPageIds: new Set(), blankSourceId: null,
   renderedPageIds: new Set(), textContentCache: {}, zoomLevel: 1,
+  documents: [], activeDocId: null,
   labeledHistory: [], theme: 'dark',
   bookmarks: [], existingOutline: null,
   compareA: null, compareB: null,
@@ -892,7 +961,8 @@ const els = {};
  'docMenuBtn','docMenu','wmText','wmColor','wmOpacity','wmApply','wmRemove','pageSizeSelect','exportQuality',
  'pnEnable','pnPosition','pnStart','autosaveStatus','clearSessionBtn','restoreBanner','rbName','rbRestore','rbDiscard',
  'bulkActions','bulkCount','bulkRotate','bulkExtract','bulkDelete','bulkClear',
- 'sigModal','sigCanvas','sigClear','sigCancel','sigUse',
+ 'sigModal','sigCanvas','sigClear','sigCancel','sigUse','sigLibrary','sigLibraryList','sigSaveToLibrary','aggressiveCompress',
+ 'docTabs','docTabsList','addDocTabBtn',
  'historyBtn','historyPanel','historyCloseBtn','historyList',
  'bookmarksBtn','bookmarksPanel','bookmarksCloseBtn','existingOutline','addBookmarkBtn','bookmarkList',
  'ocrToolBtn','ocrPanel','ocrCloseBtn','ocrEmbedToggle','ocrRunPageBtn','ocrRunAllBtn','ocrProgress','ocrResultText','ocrCopyBtn','ocrExtractTableBtn',
@@ -905,7 +975,9 @@ const els = {};
  'themeToggleBtn','extractTextBtn','imgExportFormat','imgExportDpi','exportImagesBtn',
  'pagesPanelToggleBtn','pagesPanelCloseBtn',
  'zoomOutBtn','zoomInBtn','zoomResetBtn','zoomLevelLabel',
- 'metaTitle','metaAuthor','metaSubject','metaKeywords','printBtn',
+ 'metaTitle','metaAuthor','metaSubject','metaKeywords','printBtn','exportFilename',
+ 'customPageSizeRow','customPageWidth','customPageHeight','customPageUnit',
+ 'wmModeText','wmModeImage','wmTextControls','wmImageControls','wmImagePick','wmImageInput','wmImageName','wmColorRow',
  'whatsNewLink','whatsNewModal','whatsNewList','whatsNewCloseBtn','langSelect',
  'findRedactBtn','findRedactModal','frPatternEmail','frPatternPhone','frPatternSSN','frPatternCC',
  'semanticSearchBtn','semanticModal','semanticIndexBtn','semanticProgress','semanticQuery',
@@ -915,6 +987,9 @@ const els = {};
 ].forEach(id => els[id] = document.getElementById(id));
 
 function genId(){ return 'p_' + Math.random().toString(36).slice(2,10) + Date.now().toString(36); }
+els.pageSizeSelect.addEventListener('change', ()=>{
+  els.customPageSizeRow.style.display = els.pageSizeSelect.value === 'custom' ? 'flex' : 'none';
+});
 function showToast(msg){
   els.toast.textContent = msg; els.toast.classList.add('show');
   clearTimeout(showToast._t); showToast._t = setTimeout(()=>els.toast.classList.remove('show'), 2400);
@@ -1248,8 +1323,104 @@ async function loadPdfJsDoc(bytes){
   }
 }
 
+/* ================= Multiple documents (tabs) =================
+   Scoped deliberately: tabs are a live, in-session convenience only. The
+   existing autosave/restore system persists a single document, and rewiring
+   that for multiple documents is a separate piece of work — switching tabs
+   works great right now, but only the currently active tab survives a
+   refresh. That's disclosed in the tab bar's tooltip, not hidden. Underlying
+   PDF sources (state.sources) stay in one shared pool across all tabs since
+   their IDs are already globally unique — only the "live mirror" fields
+   (pages, history, field values, etc.) get snapshotted per tab. */
+function snapshotLiveStateInto(doc){
+  doc.pages = state.pages; doc.fieldValues = state.fieldValues; doc.bookmarks = state.bookmarks;
+  doc.history = state.history; doc.labeledHistory = state.labeledHistory; doc.future = state.future;
+  doc.fileBaseName = state.fileBaseName; doc.autosaveDisabled = state.autosaveDisabled;
+  doc.metaTitle = els.metaTitle.value; doc.metaAuthor = els.metaAuthor.value;
+  doc.metaSubject = els.metaSubject.value; doc.metaKeywords = els.metaKeywords.value;
+  doc.exportFilename = els.exportFilename.value;
+}
+function saveActiveDocumentSnapshot(){
+  if (!state.activeDocId) return;
+  const doc = state.documents.find(d=>d.id===state.activeDocId);
+  if (doc) snapshotLiveStateInto(doc);
+}
+function createDocumentSlot(name){
+  const doc = {
+    id: genId(), name, pages: [], fieldValues: {}, bookmarks: [],
+    history: [], labeledHistory: [], future: [], fileBaseName: name.replace(/\.pdf$/i,''),
+    autosaveDisabled: false, metaTitle:'', metaAuthor:'', metaSubject:'', metaKeywords:'', exportFilename: name.replace(/\.pdf$/i,''),
+  };
+  state.documents.push(doc);
+  return doc;
+}
+async function switchToDocument(docId){
+  if (docId === state.activeDocId) return;
+  saveActiveDocumentSnapshot();
+  const doc = state.documents.find(d=>d.id===docId);
+  if (!doc) return;
+  state.activeDocId = docId;
+  state.pages = doc.pages; state.fieldValues = doc.fieldValues; state.bookmarks = doc.bookmarks;
+  state.history = doc.history; state.labeledHistory = doc.labeledHistory; state.future = doc.future;
+  state.fileBaseName = doc.fileBaseName; state.autosaveDisabled = doc.autosaveDisabled;
+  els.fileInfo.textContent = doc.name;
+  els.metaTitle.value = doc.metaTitle; els.metaAuthor.value = doc.metaAuthor;
+  els.metaSubject.value = doc.metaSubject; els.metaKeywords.value = doc.metaKeywords;
+  els.exportFilename.value = doc.exportFilename;
+  state.selectedPageIds = new Set();
+  updateHistoryButtons();
+  els.exportBtn.disabled = state.pages.length === 0;
+  els.emptyState.style.display = state.pages.length === 0 ? 'flex' : 'none';
+  await renderAllPages(); await renderThumbs();
+  renderDocTabs();
+}
+async function closeDocumentTab(docId){
+  const idx = state.documents.findIndex(d=>d.id===docId);
+  if (idx === -1) return;
+  const wasActive = docId === state.activeDocId;
+  state.documents.splice(idx, 1);
+  if (wasActive){
+    if (state.documents.length){
+      const next = state.documents[Math.max(0, idx-1)];
+      state.activeDocId = null; // force switchToDocument to treat this as a real switch
+      await switchToDocument(next.id);
+    } else {
+      state.activeDocId = null;
+      state.pages = []; state.fieldValues = {}; state.bookmarks = [];
+      state.history = []; state.labeledHistory = []; state.future = [];
+      els.fileInfo.textContent = 'No document open';
+      els.exportBtn.disabled = true; els.emptyState.style.display = 'flex';
+      els.pagesContainer.innerHTML = ''; await renderThumbs();
+      renderDocTabs();
+    }
+  } else {
+    renderDocTabs();
+  }
+}
+function renderDocTabs(){
+  els.docTabs.classList.toggle('show', state.documents.length > 0);
+  els.docTabsList.innerHTML = '';
+  state.documents.forEach(doc=>{
+    const tab = document.createElement('div');
+    tab.className = 'doc-tab' + (doc.id === state.activeDocId ? ' active' : '');
+    tab.title = doc.name + (state.documents.length > 1 ? ' — only the active tab autosaves' : '');
+    const label = document.createElement('span'); label.textContent = doc.name;
+    const close = document.createElement('button'); close.className='doc-tab-close'; close.textContent='×'; close.setAttribute('aria-label','Close ' + doc.name);
+    close.addEventListener('click', (e)=>{ e.stopPropagation(); closeDocumentTab(doc.id); });
+    tab.appendChild(label); tab.appendChild(close);
+    tab.addEventListener('click', ()=> switchToDocument(doc.id));
+    els.docTabsList.appendChild(tab);
+  });
+}
+els.addDocTabBtn.addEventListener('click', ()=> els.fileInput.click());
+
 async function openFile(file, reset){
   try{
+    // Merging "into" a document that was never assigned a tab (e.g. merge
+    // clicked before any tracked open) has nothing real to merge into —
+    // treat it as a fresh open so it isn't silently lost later.
+    if (!reset && !state.activeDocId) reset = true;
+
     const bytes = await file.arrayBuffer();
     const sourceId = genId();
     const { doc: pdfjsDoc, encrypted } = await loadPdfJsDoc(bytes);
@@ -1258,10 +1429,15 @@ async function openFile(file, reset){
 
     if (reset){
       hideRestoreBanner();
-      state.pages = []; state.fieldValues = {}; state.history = []; state.future = []; state.labeledHistory = []; state.bookmarks = [];
+      saveActiveDocumentSnapshot();
+      const newDoc = createDocumentSlot(file.name);
+      state.activeDocId = newDoc.id;
+      state.pages = newDoc.pages; state.fieldValues = newDoc.fieldValues; state.bookmarks = newDoc.bookmarks;
+      state.history = newDoc.history; state.labeledHistory = newDoc.labeledHistory; state.future = newDoc.future;
       state.textContentCache = {}; state.ocrCache = {};
       state.fileBaseName = file.name.replace(/\.pdf$/i,''); state.autosaveDisabled = false;
       els.fileInfo.textContent = file.name;
+      els.exportFilename.value = state.fileBaseName;
       try{
         const meta = await pdfjsDoc.getMetadata();
         const info = (meta && meta.info) || {};
@@ -1270,6 +1446,7 @@ async function openFile(file, reset){
         els.metaSubject.value = info.Subject || '';
         els.metaKeywords.value = info.Keywords || '';
       }catch(e){ els.metaTitle.value=''; els.metaAuthor.value=''; els.metaSubject.value=''; els.metaKeywords.value=''; }
+      renderDocTabs();
     }
     for (let i=0;i<pdfjsDoc.numPages;i++){
       state.pages.push({ id: genId(), sourceId, origIndex: i, rotation: 0, annotations: [], watermark: null });
@@ -1532,12 +1709,23 @@ function drawImageAnn(ctx, ann, w, h){
   if (img) ctx.drawImage(img, ann.x*w, ann.y*h, ann.w*w, ann.h*h);
 }
 function drawWatermark(ctx, wm, w, h){
-  ctx.save(); ctx.globalAlpha=wm.opacity; ctx.fillStyle=wm.color;
+  ctx.save(); ctx.globalAlpha=wm.opacity;
   ctx.translate(w/2,h/2); ctx.rotate(-Math.PI/6);
-  const fontPx = Math.max(24, w*0.09);
-  ctx.font = `600 ${fontPx}px 'IBM Plex Mono', monospace`;
-  ctx.textAlign='center'; ctx.textBaseline='middle';
-  ctx.fillText(wm.text, 0, 0); ctx.restore();
+  if (wm.type === 'image' && wm.dataUrl){
+    const img = state.imageCache.get(wm.dataUrl);
+    if (img){
+      const targetW = w*0.5;
+      const targetH = targetW * (img.naturalHeight/img.naturalWidth);
+      ctx.drawImage(img, -targetW/2, -targetH/2, targetW, targetH);
+    }
+  } else {
+    ctx.fillStyle=wm.color;
+    const fontPx = Math.max(24, w*0.09);
+    ctx.font = `600 ${fontPx}px 'IBM Plex Mono', monospace`;
+    ctx.textAlign='center'; ctx.textBaseline='middle';
+    ctx.fillText(wm.text, 0, 0);
+  }
+  ctx.restore();
 }
 function wrapText(text, maxCharsPerLine){
   const words = text.split(/\s+/); const lines=[]; let cur='';
@@ -1868,21 +2056,82 @@ els.imageFileInput.addEventListener('change', async (e)=>{
   document.querySelector('.tool-btn[data-tool="pointer"]').click();
 });
 
-/* ================= Signature modal ================= */
+/* ================= Paste image from clipboard ================= */
+document.addEventListener('paste', async (e)=>{
+  const target = e.target;
+  const isEditable = target.isContentEditable || target.tagName === 'INPUT' || target.tagName === 'TEXTAREA';
+  if (isEditable) return; // let normal text paste happen in inputs/text annotations
+  if (!state.pages.length) return;
+  const items = (e.clipboardData && e.clipboardData.items) || [];
+  const imageItem = Array.from(items).find(it => it.type && it.type.startsWith('image/'));
+  if (!imageItem) return;
+  e.preventDefault();
+  const file = imageItem.getAsFile();
+  if (!file) return;
+  const dataUrl = await fileToDataUrl(file);
+  await placeImageOnTargetPage(dataUrl, 0.32);
+  showToast('Pasted image — drag to move, corner handle to resize');
+});
+
+/* ================= Signature modal (with a persisted library) ================= */
 let sigDrawing = false;
 const sigCtx = els.sigCanvas.getContext('2d');
 sigCtx.lineWidth = 2.5; sigCtx.lineCap='round'; sigCtx.strokeStyle='#111';
 els.sigCanvas.addEventListener('pointerdown', e=>{ sigDrawing=true; const r=els.sigCanvas.getBoundingClientRect(); sigCtx.beginPath(); sigCtx.moveTo(e.clientX-r.left, e.clientY-r.top); });
 els.sigCanvas.addEventListener('pointermove', e=>{ if(!sigDrawing) return; const r=els.sigCanvas.getBoundingClientRect(); sigCtx.lineTo(e.clientX-r.left, e.clientY-r.top); sigCtx.stroke(); });
 window.addEventListener('pointerup', ()=>{ sigDrawing=false; });
+
+state.savedSignatures = []; // [{ id, dataUrl }]
+function renderSignatureLibrary(){
+  els.sigLibrary.style.display = state.savedSignatures.length ? '' : 'none';
+  els.sigLibraryList.innerHTML = '';
+  state.savedSignatures.forEach(sig=>{
+    const item = document.createElement('div'); item.className = 'sig-lib-item';
+    const img = document.createElement('img'); img.src = sig.dataUrl; img.alt = 'Saved signature'; item.appendChild(img);
+    item.addEventListener('click', async ()=>{
+      els.sigModal.classList.remove('open');
+      await placeImageOnTargetPage(sig.dataUrl, 0.22);
+      document.querySelector('.tool-btn[data-tool="pointer"]').click();
+    });
+    const del = document.createElement('button'); del.className='sig-lib-del'; del.textContent='×';
+    del.addEventListener('click', (e)=>{ e.stopPropagation(); state.savedSignatures = state.savedSignatures.filter(s=>s.id!==sig.id); renderSignatureLibrary(); saveSignatureLibrary(); });
+    item.appendChild(del);
+    els.sigLibraryList.appendChild(item);
+  });
+}
+async function saveSignatureLibrary(){
+  if (!window.storage) return;
+  try{ await window.storage.set('kvpdf:signatures', JSON.stringify(state.savedSignatures), false); }catch(e){ console.warn('Could not save signature library (may be too large)', e); }
+}
+(async function loadSignatureLibrary(){
+  if (!window.storage) return;
+  try{
+    const res = await window.storage.get('kvpdf:signatures', false);
+    if (res && res.value) state.savedSignatures = JSON.parse(res.value);
+  }catch(e){ /* none saved yet */ }
+})();
+
 document.querySelector('.tool-btn[data-tool="signature"]').addEventListener('click', ()=>{
   if (!state.pages.length){ showToast('Open a PDF first'); return; }
+  renderSignatureLibrary();
   els.sigModal.classList.add('open');
 });
 els.sigClear.addEventListener('click', ()=> sigCtx.clearRect(0,0,els.sigCanvas.width, els.sigCanvas.height));
 els.sigCancel.addEventListener('click', ()=> els.sigModal.classList.remove('open'));
+els.sigSaveToLibrary.addEventListener('click', ()=>{
+  const dataUrl = els.sigCanvas.toDataURL('image/png');
+  const blank = document.createElement('canvas'); blank.width=els.sigCanvas.width; blank.height=els.sigCanvas.height;
+  if (dataUrl === blank.toDataURL('image/png')){ showToast('Draw a signature first'); return; }
+  state.savedSignatures.push({ id: genId(), dataUrl });
+  saveSignatureLibrary();
+  renderSignatureLibrary();
+  sigCtx.clearRect(0,0,els.sigCanvas.width, els.sigCanvas.height);
+  showToast('Saved to your signature library');
+});
 els.sigUse.addEventListener('click', async ()=>{
   const dataUrl = els.sigCanvas.toDataURL('image/png');
+  const blank = document.createElement('canvas'); blank.width=els.sigCanvas.width; blank.height=els.sigCanvas.height;
+  if (dataUrl === blank.toDataURL('image/png')){ showToast('Draw a signature first, or pick one from your library above'); return; }
   els.sigModal.classList.remove('open');
   sigCtx.clearRect(0,0,els.sigCanvas.width, els.sigCanvas.height);
   await placeImageOnTargetPage(dataUrl, 0.22);
@@ -2058,15 +2307,47 @@ function closeAllPanels(){
   els.pagesPanel.classList.remove('mobile-open');
 }
 document.addEventListener('click', (e)=>{ if (!els.docMenu.contains(e.target) && e.target!==els.docMenuBtn && !els.docMenuBtn.contains(e.target)) closeDocMenu(); });
+
+/* ---- Watermark mode toggle (text / image) ---- */
+state.wmMode = 'text';
+state.wmImageDataUrl = null;
+els.wmModeText.addEventListener('click', ()=>{
+  state.wmMode = 'text';
+  els.wmModeText.classList.add('primary'); els.wmModeImage.classList.remove('primary');
+  els.wmTextControls.style.display = ''; els.wmImageControls.style.display = 'none';
+  els.wmColorRow.style.display = '';
+});
+els.wmModeImage.addEventListener('click', ()=>{
+  state.wmMode = 'image';
+  els.wmModeImage.classList.add('primary'); els.wmModeText.classList.remove('primary');
+  els.wmImageControls.style.display = ''; els.wmTextControls.style.display = 'none';
+  els.wmColorRow.style.display = 'none';
+});
+els.wmImagePick.addEventListener('click', ()=> els.wmImageInput.click());
+els.wmImageInput.addEventListener('change', async (e)=>{
+  const file = e.target.files[0]; e.target.value='';
+  if (!file) return;
+  const dataUrl = await fileToDataUrl(file);
+  await loadImageCached(dataUrl); // pre-warm so drawWatermark can find it synchronously
+  state.wmImageDataUrl = dataUrl;
+  els.wmImageName.textContent = 'Selected: ' + file.name;
+});
+
 els.wmApply.addEventListener('click', ()=>{
-  const text = els.wmText.value.trim();
-  if (!text){ showToast('Enter watermark text first'); return; }
-  const wm = { text, color: els.wmColor.value, opacity: Number(els.wmOpacity.value)/100 };
+  let wm;
+  if (state.wmMode === 'image'){
+    if (!state.wmImageDataUrl){ showToast('Choose a watermark image first'); return; }
+    wm = { type:'image', dataUrl: state.wmImageDataUrl, opacity: Number(els.wmOpacity.value)/100 };
+  } else {
+    const text = els.wmText.value.trim();
+    if (!text){ showToast('Enter watermark text first'); return; }
+    wm = { type:'text', text, color: els.wmColor.value, opacity: Number(els.wmOpacity.value)/100 };
+  }
   state.pages.forEach(p=> p.watermark = { ...wm });
-  pushHistory(); renderAllPages();
+  pushHistory('Applied watermark'); renderAllPages();
   showToast('Watermark applied to all pages');
 });
-els.wmRemove.addEventListener('click', ()=>{ state.pages.forEach(p=>p.watermark=null); pushHistory(); renderAllPages(); showToast('Watermark removed'); });
+els.wmRemove.addEventListener('click', ()=>{ state.pages.forEach(p=>p.watermark=null); pushHistory('Removed watermark'); renderAllPages(); showToast('Watermark removed'); });
 
 /* ================= Form field layer (detected AcroForm fields) ================= */
 async function buildFormLayer(page, viewport, formLayer){
@@ -2693,7 +2974,10 @@ els.printBtn.addEventListener('click', async ()=>{
   window.print();
 });
 
-function pageNeedsRaster(pageEntry){ return pageEntry.rotation!==0 || pageEntry.annotations.some(a=>a.type==='redact'); }
+function pageNeedsRaster(pageEntry){
+  if (els.aggressiveCompress.checked) return true;
+  return pageEntry.rotation!==0 || pageEntry.annotations.some(a=>a.type==='redact');
+}
 
 async function rasterizePage(pageEntry, quality){
   const src = state.sources[pageEntry.sourceId];
@@ -2769,7 +3053,7 @@ async function exportPdf(pagesOverride, filenameSuffix){
           newPage = outDoc.addPage([width, height]);
           placeRect = { x:0, y:0, width, height };
         } else {
-          const target = PAGE_SIZES[sizeMode];
+          const target = resolvePageSize(sizeMode);
           const scale = Math.min(target.width/width, target.height/height) * 0.96;
           const drawW = width*scale, drawH = height*scale;
           const dx=(target.width-drawW)/2, dy=(target.height-drawH)/2;
@@ -2792,7 +3076,7 @@ async function exportPdf(pagesOverride, filenameSuffix){
           const srcPage = srcDoc.getPage(pageEntry.origIndex);
           const { width: origW, height: origH } = srcPage.getSize();
           const embedded = await outDoc.embedPage(srcPage);
-          const target = PAGE_SIZES[sizeMode];
+          const target = resolvePageSize(sizeMode);
           const scale = Math.min(target.width/origW, target.height/origH) * 0.96;
           const drawW = origW*scale, drawH = origH*scale;
           const dx=(target.width-drawW)/2, dy=(target.height-drawH)/2;
@@ -2932,7 +3216,9 @@ async function exportPdf(pagesOverride, filenameSuffix){
     const blob = new Blob([bytes], { type:'application/pdf' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
-    a.href = url; a.download = `${state.fileBaseName}${filenameSuffix || '-edited'}.pdf`;
+    const rawName = (els.exportFilename.value || state.fileBaseName || 'document').trim();
+    const safeName = rawName.replace(/[\\/:*?"<>|]/g, '-').replace(/\.pdf$/i, '') || 'document';
+    a.href = url; a.download = `${safeName}${filenameSuffix || '-edited'}.pdf`;
     document.body.appendChild(a); a.click(); a.remove();
     setTimeout(()=>URL.revokeObjectURL(url), 4000);
     showToast('Exported ' + a.download);
@@ -3246,7 +3532,7 @@ els.batchRunBtn.addEventListener('click', async ()=>{
           const srcPage = srcDoc.getPage(pi);
           const { width: origW, height: origH } = srcPage.getSize();
           const embedded = await outDoc.embedPage(srcPage);
-          const target = PAGE_SIZES[pageSize];
+          const target = resolvePageSize(pageSize);
           const scale = Math.min(target.width/origW, target.height/origH) * 0.96;
           const drawW = origW*scale, drawH = origH*scale;
           const dx = (target.width-drawW)/2, dy = (target.height-drawH)/2;
@@ -3580,6 +3866,15 @@ els.rbRestore.addEventListener('click', async ()=>{
     state.history = []; state.future = [];
     updateHistoryButtons();
     els.exportBtn.disabled = false; els.emptyState.style.display = 'none';
+
+    const restoredDoc = createDocumentSlot(state.fileBaseName + '.pdf');
+    state.activeDocId = restoredDoc.id;
+    restoredDoc.pages = state.pages; restoredDoc.fieldValues = state.fieldValues; restoredDoc.bookmarks = state.bookmarks;
+    restoredDoc.history = state.history; restoredDoc.labeledHistory = state.labeledHistory; restoredDoc.future = state.future;
+    restoredDoc.fileBaseName = state.fileBaseName; restoredDoc.exportFilename = state.fileBaseName;
+    els.exportFilename.value = state.fileBaseName;
+    renderDocTabs();
+
     await renderAllPages(); await renderThumbs();
     showToast('Session restored');
   }catch(e){ console.error('Restore failed', e); showToast('Could not restore the saved session'); }
@@ -3601,8 +3896,15 @@ if ('serviceWorker' in navigator){
 }
 
 /* ================= What's New ================= */
-const WHATS_NEW_VERSION = '2026-08-17';
+const WHATS_NEW_VERSION = '2026-08-18';
 const WHATS_NEW_ITEMS = [
+  { title: 'Multiple documents at once', body: 'Open several PDFs as tabs and switch between them — note that only the active tab autosaves across a refresh, for now.' },
+  { title: 'Signature library', body: 'Save signatures once and reuse them, instead of redrawing every time.' },
+  { title: 'Shrink an existing PDF', body: 'A new "aggressively shrink file size" option that recompresses a scan-heavy PDF, not just your annotations.' },
+  { title: 'Image watermarks', body: 'Stamp a logo or image across every page, not just text.' },
+  { title: 'Paste images directly', body: 'Ctrl+V an image straight onto the page — no file picker needed.' },
+  { title: 'Custom export page size', body: 'Any width and height, in inches, millimeters, or points — not just A4/Letter.' },
+  { title: 'Rename on export', body: 'Set your own filename before downloading, instead of always "-edited.pdf".' },
   { title: 'Zoom controls', body: 'Zoom in and out independently of the fit-to-width view, with +/-/0 shortcuts.' },
   { title: 'Drag to reorder pages', body: 'Drag thumbnails directly to reorder pages, alongside the existing up/down buttons.' },
   { title: 'Duplicate page', body: 'One click to duplicate a page, annotations included.' },

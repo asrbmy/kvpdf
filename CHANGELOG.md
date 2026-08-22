@@ -5,11 +5,14 @@ All notable changes to KVPDF are documented here. Dates reflect when each batch 
 ## [Unreleased]
 
 ### Added
-- **Zoom controls**: independent zoom in/out (`+`/`-`/`0` shortcuts, floating widget) on top of the existing fit-to-width behavior.
-- **Drag-to-reorder pages**: native drag-and-drop on thumbnails, alongside the existing up/down buttons (kept for keyboard accessibility).
-- **Duplicate page**: one-click duplicate, including a deep copy of that page's annotations with fresh IDs.
-- **Document properties editor**: Title/Author/Subject/Keywords, read from the PDF on open and written back via pdf-lib on export (plus Producer/ModDate).
-- **Print**: a real print button — force-renders every page (reusing the virtualization-era `ensureAllPagesRendered()` helper) and ships a dedicated print stylesheet that hides all app chrome and strips editing-only visual affordances (delete buttons, resize handles, dashed field outlines) so what prints is the document, not the editor.
+- **Multiple documents at once (tabs)**: open several PDFs in parallel and switch between them. Deliberately scoped — underlying PDF sources are shared in one pool, but the autosave/restore system still only persists a single document, so only the active tab survives a page refresh right now. Disclosed via the tab's own tooltip, not just here.
+- **Signature library**: save a drawn signature once and reuse it from a small gallery instead of redrawing it every time, persisted the same way autosave is.
+- **Aggressive file-size compression**: a new export option that recompresses every page as an image, shrinking scan-heavy PDFs the existing "smaller file" option couldn't touch (that one only affects annotations, not images already embedded in the source PDF). Same disclosed trade-off as redaction/rotation: pages lose selectable text.
+- **Image watermarks**: stamp an image (e.g. a logo) across every page, extending the existing text-watermark system rather than duplicating it.
+- **Paste image from clipboard**: Ctrl+V an image directly onto the page.
+- **Custom export page size**: arbitrary width/height in inches, millimeters, or points, alongside the existing A4/Letter presets.
+- **Save As / rename on export**: an editable filename field instead of always `-edited.pdf`.
+- **Zoom controls**, **drag-to-reorder pages**, **duplicate page**, **document properties editor** (Title/Author/Subject/Keywords), and a **real print button** with a dedicated print stylesheet that strips all app chrome and editing-only visual noise.
 
 ### Added (previous batch)
 - **Find & redact by pattern**: scans the whole document (real text and anything OCR'd) for emails, phone numbers, SSNs, and Luhn-validated credit card numbers, or a custom regex — review every hit before committing, then redact for real via the existing true-rasterization redaction.
